@@ -225,7 +225,37 @@ header h1{font-size:1.1rem;font-weight:600;margin:0}
     else if (k === 'r' || k === 'R') { rot += 90; apply(); }
     else if (k === ' ') { e.preventDefault(); timer ? stopShow() : startShow(); }
   });
-  window.addEventListener('resize', apply);
+   /* ---- Galeria automática (Android) ---- */
+  var cap = window.Capacitor;
+  if (cap && cap.isNativePlatform && cap.isNativePlatform()) {
+    var P = cap.Plugins || {};
+    var IMG = /\.(jpe?g|png|gif|webp|bmp|heic|heif|avif)$/i;
+    var loadGallery = async function(){
+      try {
+        $('count').textContent = 'Carregando galeria…';
+        try { await P.Media.requestPermissions(); } catch (e) {}
+        var res = await P.Media.getAlbums();
+        var seen = {}, found = [];
+        for (var i = 0; i < res.albums.length; i++) {
+          try {
+            var r = await P.Filesystem.readdir({ path: res.albums[i].identifier });
+            r.files.forEach(function(f){
+              if (f.type === 'file' && IMG.test(f.name) && !seen[f.uri]) {
+                seen[f.uri] = 1;
+                found.push({ url: cap.convertFileSrc(f.uri), name: f.name, t: f.mtime || 0 });
+              }
+            });
+          } catch (e) {}
+        }
+        found.sort(function(a, b){ return b.t - a.t; });
+        items = found; render();
+        if (!found.length) $('count').textContent = 'Nenhuma imagem encontrada';
+      } catch (e) {
+        $('count').textContent = 'Erro: ' + ((e && (e.message || e.code)) || e);
+      }
+    };
+    loadGallery();
+  }window.addEventListener('resize', apply);
   window.addEventListener('popstate', function(){ if (viewer.classList.contains('open')) closeViewer(); });
 })();
 </script>
