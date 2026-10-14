@@ -1,0 +1,3 @@
+      - name: Adicionar permissão de galeria
+        run: |
+          sed -i 's#<application#<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    <application#' android/app/src/main/AndroidManifest.xml
