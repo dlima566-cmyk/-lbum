@@ -1,6 +1,6 @@
 {
   "appId": "com.seunome.visualizador",
-  "appName": "Visualizador de Imagens",
+  "appName": "David album",
   "webDir": "www",
   "android": {
     "allowMixedContent": false
