@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#17181c">
+<title>Visualizador de imagens</title>
+<style>
+:root{
+  --bg:#17181c; --panel:#1f2127; --line:#2e3139; --text:#e9e7e2; --muted:#9a9ca3; --accent:#8fb8ff;
+  --top:env(safe-area-inset-top,0px); --bottom:env(safe-area-inset-bottom,0px);
+  box-sizing:border-box;
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Galeria */
+#app{min-height:100%;display:flex;flex-direction:column;padding-top:var(--top);padding-bottom:var(--bottom)}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+header h1{font-size:1.1rem;font-weight:600;margin:0}
+.count{color:var(--muted);font-size:.85rem}
+.btn{background:var(--accent);color:#0e1626;border:0;border-radius:10px;padding:10px 16px;font-weight:600}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+.actions{display:flex;gap:8px}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:4px;padding:4px;flex:1;align-content:start}
+.thumb{aspect-ratio:1;padding:0;border:0;background:var(--panel);overflow:hidden;border-radius:4px}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+#empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;text-align:center}
+#empty p{margin:0;color:var(--muted);max-width:28ch}
+#empty strong{display:block;color:var(--text);font-size:1.2rem;margin-bottom:6px}
+
+/* Visualizador */
+#viewer{position:fixed;inset:0;background:#000;display:none;flex-direction:column;z-index:10}
+#viewer.open{display:flex}
+#stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#stage img{max-width:100%;max-height:100%;transform-origin:center;will-change:transform;pointer-events:none;-webkit-user-drag:none}
+.bar{position:absolute;left:0;right:0;display:flex;align-items:center;gap:6px;padding:10px 12px;background:rgba(15,16,19,.78);backdrop-filter:blur(8px);transition:opacity .2s}
+.bar.top{top:0;padding-top:calc(10px + var(--top));justify-content:space-between}
+.bar.bottom{bottom:0;padding-bottom:calc(10px + var(--bottom));justify-content:center;flex-wrap:wrap}
+#viewer.hide-ui .bar{opacity:0;pointer-events:none}
+.ib{width:44px;height:44px;border-radius:50%;border:0;background:transparent;display:grid;place-items:center}
+.ib:active{background:rgba(255,255,255,.14)}
+.ib[aria-pressed="true"]{background:rgba(143,184,255,.22);color:var(--accent)}
+.ib svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#title{flex:1;min-width:0;text-align:center;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pos{color:var(--muted);font-size:.8rem;margin-left:6px}
+.nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(15,16,19,.6)}
+.nav.prev{left:8px}.nav.next{right:8px}
+#viewer.hide-ui .nav{opacity:0;pointer-events:none}
+@media (hover:none){.nav{display:none}}
+@media (prefers-reduced-motion:reduce){.bar{transition:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <h1>Visualizador de imagens</h1>
+      <div class="count" id="count">Nenhuma imagem</div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="clear" hidden>Limpar</button>
+      <button class="btn" id="add">Adicionar fotos</button>
+    </div>
+  </header>
+  <div id="empty">
+    <div><strong>Nenhuma foto ainda</strong><p>Escolha imagens do seu aparelho para vê-las aqui. Nada sai do seu dispositivo.</p></div>
+    <button class="btn" id="add2">Escolher fotos</button>
+  </div>
+  <main id="grid" hidden></main>
+</div>
+
+<input type="file" id="file" accept="image/*" multiple hidden>
+
+<section id="viewer" aria-label="Visualizador" aria-modal="true" role="dialog">
+  <div id="stage"><img id="img" alt=""></div>
+  <div class="bar top">
+    <button class="ib" id="close" aria-label="Fechar"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div id="title"></div><span id="pos"></span>
+    <button class="ib" id="remove" aria-label="Remover da lista"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg></button>
+  </div>
+  <button class="ib nav prev" id="prev" aria-label="Imagem anterior"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <button class="ib nav next" id="next" aria-label="Próxima imagem"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  <div class="bar bottom">
+    <button class="ib" id="zout" aria-label="Diminuir zoom"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5M8 11h6"/></svg></button>
+    <button class="ib" id="zin" aria-label="Aumentar zoom"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5M8 11h6M11 8v6"/></svg></button>
+    <button class="ib" id="rotl" aria-label="Girar para a esquerda"><svg viewBox="0 0 24 24"><path d="M3 4v6h6M3.5 10A9 9 0 1 1 5 17"/></svg></button>
+    <button class="ib" id="rotr" aria-label="Girar para a direita"><svg viewBox="0 0 24 24"><path d="M21 4v6h-6M20.5 10A9 9 0 1 0 19 17"/></svg></button>
+    <button class="ib" id="reset" aria-label="Ajustar à tela"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="ib" id="play" aria-label="Apresentação" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg></button>
+  </div>
+</section>
+
+<script>
+(function(){
+  var $ = function(id){return document.getElementById(id)};
+  var items = [];           // {url, name}
+  var cur = 0;
+  var scale = 1, tx = 0, ty = 0, rot = 0;
+  var timer = null;
+
+  var file = $('file'), grid = $('grid'), empty = $('empty'), viewer = $('viewer'),
+      stage = $('stage'), img = $('img');
+
+  function pick(){ file.click(); }
+  $('add').onclick = pick; $('add2').onclick = pick;
+
+  file.onchange = function(){
+    Array.prototype.forEach.call(file.files, function(f){
+      if (f.type.indexOf('image/') === 0) items.push({url: URL.createObjectURL(f), name: f.name});
+    });
+    file.value = '';
+    render();
+  };
+
+  $('clear').onclick = function(){
+    items.forEach(function(i){URL.revokeObjectURL(i.url)});
+    items = []; render();
+  };
+
+  function render(){
+    var n = items.length;
+    $('count').textContent = n === 0 ? 'Nenhuma imagem' : n + (n === 1 ? ' imagem' : ' imagens');
+    empty.hidden = n > 0; grid.hidden = n === 0; $('clear').hidden = n === 0;
+    grid.innerHTML = '';
+    items.forEach(function(it, i){
+      var b = document.createElement('button');
+      b.className = 'thumb'; b.setAttribute('aria-label', 'Abrir ' + it.name);
+      var t = document.createElement('img'); t.src = it.url; t.alt = ''; t.loading = 'lazy';
+      b.appendChild(t); b.onclick = function(){ openAt(i); };
+      grid.appendChild(b);
+    });
+  }
+
+  /* ---- Visualizador ---- */
+  function apply(){
+    var odd = (Math.abs(rot / 90) % 2) === 1;
+    img.style.maxWidth = odd ? stage.clientHeight + 'px' : '100%';
+    img.style.maxHeight = odd ? stage.clientWidth + 'px' : '100%';
+    img.style.transform = 'translate(' + tx + 'px,' + ty + 'px) rotate(' + rot + 'deg) scale(' + scale + ')';
+  }
+  function resetView(){ scale = 1; tx = 0; ty = 0; rot = 0; apply(); }
+  function show(i){
+    cur = (i + items.length) % items.length;
+    img.src = items[cur].url; img.alt = items[cur].name;
+    $('title').textContent = items[cur].name;
+    $('pos').textContent = (cur + 1) + '/' + items.length;
+    scale = 1; tx = 0; ty = 0; rot = 0; apply();
+  }
+  function openAt(i){ viewer.classList.add('open'); viewer.classList.remove('hide-ui'); show(i); }
+  function closeViewer(){ stopShow(); viewer.classList.remove('open'); }
+  function next(){ if (items.length) show(cur + 1); }
+  function prev(){ if (items.length) show(cur - 1); }
+  function zoom(f){ scale = Math.min(8, Math.max(1, scale * f)); if (scale === 1){tx = 0; ty = 0;} apply(); }
+
+  function startShow(){ timer = setInterval(next, 3000); $('play').setAttribute('aria-pressed','true'); viewer.classList.add('hide-ui'); }
+  function stopShow(){ if (timer){clearInterval(timer); timer = null;} $('play').setAttribute('aria-pressed','false'); }
+
+  $('close').onclick = closeViewer;
+  $('next').onclick = next; $('prev').onclick = prev;
+  $('zin').onclick = function(){ zoom(1.5); }; $('zout').onclick = function(){ zoom(1/1.5); };
+  $('rotl').onclick = function(){ rot -= 90; apply(); };
+  $('rotr').onclick = function(){ rot += 90; apply(); };
+  $('reset').onclick = resetView;
+  $('play').onclick = function(){ timer ? (stopShow(), viewer.classList.remove('hide-ui')) : startShow(); };
+  $('remove').onclick = function(){
+    stopShow();
+    URL.revokeObjectURL(items[cur].url); items.splice(cur, 1); render();
+    if (!items.length) closeViewer(); else show(Math.min(cur, items.length - 1));
+  };
+
+  /* Gestos: arrastar, pinça, toque duplo, deslizar para trocar */
+  var ptrs = {}, startDist = 0, startScale = 1, lastTap = 0, sx = 0, sy = 0, moved = false, lx = 0, ly = 0;
+  function count(){ return Object.keys(ptrs).length; }
+  function dist(){ var k = Object.keys(ptrs), a = ptrs[k[0]], b = ptrs[k[1]]; return Math.hypot(a.x - b.x, a.y - b.y); }
+
+  stage.addEventListener('pointerdown', function(e){
+    stage.setPointerCapture(e.pointerId);
+    ptrs[e.pointerId] = {x: e.clientX, y: e.clientY};
+    if (count() === 1){ sx = lx = e.clientX; sy = ly = e.clientY; moved = false; }
+    if (count() === 2){ startDist = dist(); startScale = scale; }
+  });
+  stage.addEventListener('pointermove', function(e){
+    if (!ptrs[e.pointerId]) return;
+    ptrs[e.pointerId] = {x: e.clientX, y: e.clientY};
+    if (count() === 2){
+      scale = Math.min(8, Math.max(1, startScale * dist() / startDist)); moved = true; apply();
+    } else if (count() === 1){
+      if (Math.hypot(e.clientX - sx, e.clientY - sy) > 8) moved = true;
+      if (scale > 1){ tx += e.clientX - lx; ty += e.clientY - ly; apply(); }
+      lx = e.clientX; ly = e.clientY;
+    }
+  });
+  function end(e){
+    if (!ptrs[e.pointerId]) return;
+    var was = count();
+    delete ptrs[e.pointerId];
+    if (was !== 1) return;
+    var dx = e.clientX - sx, dy = e.clientY - sy;
+    if (scale === 1 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      stopShow(); dx < 0 ? next() : prev(); return;
+    }
+    if (!moved){
+      var now = Date.now();
+      if (now - lastTap < 300){ scale > 1 ? (scale = 1, tx = 0, ty = 0) : (scale = 2.5); apply(); lastTap = 0; }
+      else { lastTap = now; setTimeout(function(){ if (lastTap && Date.now() - lastTap >= 290){ viewer.classList.toggle('hide-ui'); lastTap = 0; } }, 300); }
+    }
+  }
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
+  stage.addEventListener('wheel', function(e){ e.preventDefault(); zoom(e.deltaY < 0 ? 1.15 : 1/1.15); }, {passive:false});
+
+  document.addEventListener('keydown', function(e){
+    if (!viewer.classList.contains('open')) return;
+    var k = e.key;
+    if (k === 'Escape') closeViewer();
+    else if (k === 'ArrowRight') next();
+    else if (k === 'ArrowLeft') prev();
+    else if (k === '+' || k === '=') zoom(1.25);
+    else if (k === '-') zoom(1/1.25);
+    else if (k === 'r' || k === 'R') { rot += 90; apply(); }
+    else if (k === ' ') { e.preventDefault(); timer ? stopShow() : startShow(); }
+  });
+  window.addEventListener('resize', apply);
+  window.addEventListener('popstate', function(){ if (viewer.classList.contains('open')) closeViewer(); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "appId": "com.seunome.visualizador",
+  "appName": "Visualizador de Imagens",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}
