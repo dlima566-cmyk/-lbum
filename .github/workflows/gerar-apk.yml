@@ -25,7 +25,7 @@ jobs:
           node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));c.plugins=Object.assign({},c.plugins,{Media:{androidGalleryMode:true}});fs.writeFileSync('capacitor.config.json',JSON.stringify(c,null,2))"
       - name: Criar projeto Android
         run: npx cap add android
-                - name: Permissoes de galeria
+      - name: Permissoes de galeria
         run: |
           sed -i 's#<application#<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /><uses-permission android:name="android.permission.READ_MEDIA_VIDEO" /><uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /><uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /><application#' android/app/src/main/AndroidManifest.xml
       - name: Sincronizar
