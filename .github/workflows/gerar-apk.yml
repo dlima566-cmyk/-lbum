@@ -16,12 +16,18 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: Preparar pasta www
+      - name: Preparar www
         run: mkdir -p www && cp -n index.html www/ || true
-      - name: Instalar dependências
+      - name: Instalar dependencias
         run: npm install
+      - name: Ativar modo galeria
+        run: |
+          node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));c.plugins=Object.assign({},c.plugins,{Media:{androidGalleryMode:true}});fs.writeFileSync('capacitor.config.json',JSON.stringify(c,null,2))"
       - name: Criar projeto Android
         run: npx cap add android
+      - name: Permissoes de galeria
+        run: |
+          sed -i 's#<application#<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /><uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /><application#' android/app/src/main/AndroidManifest.xml
       - name: Sincronizar
         run: npx cap sync android
       - name: Compilar APK
