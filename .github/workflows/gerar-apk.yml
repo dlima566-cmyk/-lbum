@@ -35,6 +35,12 @@ jobs:
           sed -i 's#<application#<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /><uses-permission android:name="android.permission.READ_MEDIA_VIDEO" /><uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /><uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /><application#' android/app/src/main/AndroidManifest.xml
       - name: Sincronizar
         run: npx cap sync android
+      - name: Assinatura fixa
+        env:
+          KS: ${{ secrets.DEBUG_KEYSTORE_B64 }}
+        run: |
+          mkdir -p ~/.android
+          echo "$KS" | base64 -d > ~/.android/debug.keystore
       - name: Compilar APK
         run: cd android && chmod +x gradlew && ./gradlew assembleDebug
       - name: Publicar APK
