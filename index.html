@@ -333,6 +333,11 @@ button.row:active{background:var(--raise)}
     var real = list.filter(function(it){ return it.key.indexOf('file://') === 0; });
     if (!real.length) { toast('Só dá para proteger fotos do aparelho'); return false; }
     if (!P.Vault || !P.MediaDelete) { toast('Instale o APK novo para usar a pasta bloqueada'); return false; }
+    if (!settings.vaultTip) {
+      var okt = await dialog({title: 'Mover para a pasta bloqueada', msg: 'Em seguida o Android vai perguntar se você quer "excluir" as fotos da galeria. É normal: elas são copiadas para a pasta bloqueada antes, e não se perdem.', ok: 'Continuar'});
+      if (!okt) return false;
+      settings.vaultTip = 1; save('meddia_settings_v1', settings);
+    }
     var metas = real.map(function(it){ return {path: decodeURI(it.key.replace('file://', '')), name: it.name, t: it.t, album: it.album || '', video: it.video ? 1 : 0}; });
     var r;
     try { r = await P.Vault.moveIn({items: metas}); }
@@ -968,7 +973,7 @@ button.row:active{background:var(--raise)}
   function renderSettings(){
     $('optTrash').checked = !!settings.trash;
     $('trashN').textContent = all.filter(function(it){ return trash[it.key]; }).length;
-    $('vaultN').textContent = all.filter(function(it){ return !trash[it.key] && isLocked(it); }).length;
+    $('vaultN').textContent = vaultItems.length + all.filter(function(it){ return !trash[it.key] && isLocked(it); }).length;
     $('pwLabel').textContent = pwHash ? 'Alterar senha' : 'Criar senha';
     var cnt = {}, names = [];
     all.forEach(function(it){ var a = it.album; if (!a || trash[it.key]) return; if (!cnt[a]) { cnt[a] = 0; names.push(a); } cnt[a]++; });
@@ -992,7 +997,7 @@ button.row:active{background:var(--raise)}
     });
     if (!names.length) { var p = document.createElement('p'); p.className = 'note'; p.textContent = 'Nenhum álbum encontrado ainda.'; box.appendChild(p); }
   }
-  function openSettings(){ renderSettings(); $('settings').hidden = false; }
+  function openSettings(){ renderSettings(); $('settings').hidden = false; loadVault().then(renderSettings); }
   function closeSettings(){ $('settings').hidden = true; }
   $('gear').onclick = openSettings;
   $('sback').onclick = closeSettings;
@@ -1099,6 +1104,7 @@ button.row:active{background:var(--raise)}
 
   /* ---- Galeria automática (Android) ---- */
   if (native) {
+    loadVault();
     if (P.App && P.App.addListener) {
       P.App.addListener('backButton', function(){ if (!handleBack()) P.App.exitApp(); });
     }
