@@ -333,6 +333,15 @@ header .ib{
   .thumb:hover img{transform:none;filter:none}
 }
 
+
+/* Cabeçalho: marca centralizada e botão de menu de três linhas */
+header#hdr{position:sticky;display:flex;align-items:center;justify-content:flex-end;min-height:76px;box-sizing:border-box}
+header#hdr .header-brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 112px);text-align:center;}
+header#hdr h1{font-size:clamp(1.8rem,7vw,2.15rem);font-weight:850;letter-spacing:.035em;line-height:1.05;white-space:nowrap}
+header#hdr .count{font-size:.76rem;margin-top:7px;white-space:nowrap}
+header#hdr #gear{position:relative;z-index:1;flex:0 0 44px;width:44px;height:44px;padding:10px;border-radius:14px}
+header#hdr #gear svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+
 </style>
 </head>
 <body>
@@ -347,11 +356,11 @@ header .ib{
     <button class="ib" id="selDel" aria-label="Excluir"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg></button>
   </div>
   <header id="hdr">
-    <div>
+    <div class="header-brand">
       <h1>Me<span class="dd">DD</span>ia</h1>
       <div class="count" id="count">Nenhuma imagem</div>
     </div>
-    <button class="ib" id="gear" aria-label="Configurações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    <button class="ib" id="gear" aria-label="Abrir menu e configurações"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6h17M3.5 12h17M3.5 18h17"/></svg></button>
   </header>
   <div id="banner" hidden>
     <button class="btn ghost" id="bback">← Voltar</button>
