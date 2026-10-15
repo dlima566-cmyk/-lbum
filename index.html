@@ -38,8 +38,16 @@ header h1{font-size:1.2rem;font-weight:700;margin:0;letter-spacing:.2px}
 
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:4px;padding:4px;flex:1;align-content:start}
 .dh{grid-column:1/-1;padding:14px 6px 4px;font-size:.85rem;font-weight:600;color:var(--muted)}
-.thumb{position:relative;aspect-ratio:1;padding:0;border:0;background:var(--panel);overflow:hidden;border-radius:4px}
-.thumb img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.thumb{position:relative;aspect-ratio:1;padding:0;border:0;background:var(--panel);overflow:hidden;border-radius:4px;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;transition:transform .12s}
+.ck{position:absolute;left:6px;top:6px;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.35);display:none;place-items:center;font-size:13px;line-height:1;font-weight:700;color:#0e1626;pointer-events:none}
+#grid.selecting .ck{display:grid}
+#grid.selecting .hb{left:auto;right:6px}
+.thumb.sel img{transform:scale(.84);border-radius:6px}
+.thumb.sel .ck{background:var(--accent);border-color:var(--accent)}
+.thumb.sel .ck::after{content:'✓'}
+#selbar{display:flex;align-items:center;gap:4px;padding:8px 12px;min-height:64px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:var(--top);z-index:5}
+#selN{flex:1;font-weight:600;min-width:0}
 .play{position:absolute;right:6px;bottom:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.6);display:grid;place-items:center;font-size:11px;pointer-events:none}
 .hb{position:absolute;left:6px;top:4px;color:#ff6b81;font-size:16px;text-shadow:0 0 4px #000;pointer-events:none}
 #none{margin:40px 16px;text-align:center;color:var(--muted)}
@@ -100,7 +108,15 @@ header h1{font-size:1.2rem;font-weight:700;margin:0;letter-spacing:.2px}
 </head>
 <body>
 <div id="app">
-  <header>
+  <div id="selbar" hidden>
+    <button class="ib" id="selX" aria-label="Cancelar seleção"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <span id="selN">0 selecionados</span>
+    <button class="ib" id="selAll" aria-label="Selecionar tudo"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/></svg></button>
+    <button class="ib" id="selShare" aria-label="Compartilhar"><svg viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4M5 12v7h14v-7"/></svg></button>
+    <button class="ib" id="selRestore" aria-label="Restaurar" hidden><svg viewBox="0 0 24 24"><path d="M9 14l-4-4 4-4M5 10h9a5 5 0 0 1 0 10h-3"/></svg></button>
+    <button class="ib" id="selDel" aria-label="Excluir"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg></button>
+  </div>
+  <header id="hdr">
     <div>
       <h1>Me<span class="dd">DD</span>ia</h1>
       <div class="count" id="count">Nenhuma imagem</div>
@@ -275,7 +291,76 @@ header h1{font-size:1.2rem;font-weight:700;margin:0;letter-spacing:.2px}
     if (mode === 'vault') return all.filter(function(it){ return !trash[it.key] && isLocked(it); });
     return all.filter(function(it){ return !trash[it.key] && !isLocked(it); });
   }
-  function setMode(m){ mode = m; fType = 'all'; fAlbum = null; applyFilter(); window.scrollTo(0, 0); }
+  function setMode(m){ mode = m; fType = 'all'; fAlbum = null; selMode = false; sel = {}; applyFilter(); window.scrollTo(0, 0); }
+
+  /* ---- Seleção múltipla ---- */
+  var selMode = false, sel = {};
+  function selList(){ return items.filter(function(it){ return sel[it.key]; }); }
+  function updateSelUI(){
+    var n = selList().length;
+    $('hdr').hidden = selMode; $('selbar').hidden = !selMode;
+    grid.classList.toggle('selecting', selMode);
+    $('selN').textContent = n + (n === 1 ? ' selecionado' : ' selecionados');
+    var t = mode === 'trash';
+    $('selShare').hidden = t; $('selRestore').hidden = !t;
+    $('selDel').setAttribute('aria-label', t ? 'Excluir definitivamente' : (settings.trash ? 'Mover para a lixeira' : 'Excluir'));
+  }
+  function refreshSel(){
+    for (var i = 0; i < els.length; i++) {
+      if (els[i] && items[i]) els[i].classList.toggle('sel', !!sel[items[i].key]);
+    }
+    updateSelUI();
+  }
+  function enterSel(i){
+    selMode = true; sel = {}; sel[items[i].key] = 1;
+    try { if (navigator.vibrate) navigator.vibrate(15); } catch (e) {}
+    refreshSel();
+  }
+  function exitSel(){ selMode = false; sel = {}; refreshSel(); }
+  function toggleSel(i){
+    var k = items[i].key;
+    if (sel[k]) delete sel[k]; else sel[k] = 1;
+    refreshSel();
+    if (!selList().length) exitSel();
+  }
+  function selAll(){
+    var every = items.length > 0 && selList().length === items.length;
+    if (every) { exitSel(); return; }
+    items.forEach(function(it){ sel[it.key] = 1; });
+    refreshSel();
+  }
+  async function selShare(){
+    var list = selList().filter(function(it){ return it.key.indexOf('file://') === 0; });
+    if (!P.Share || !list.length) { toast('Compartilhar funciona no app instalado, com arquivos do aparelho'); return; }
+    try { await P.Share.share({files: list.map(function(it){ return it.key; }), dialogTitle: 'Compartilhar'}); }
+    catch (e) { var m = msgOf(e); if (!/cancel/i.test(m)) toast('Não foi possível compartilhar: ' + m); }
+  }
+  async function selDelete(){
+    var list = selList(); if (!list.length) return;
+    var n = list.length, txt = n === 1 ? '1 item será apagado' : n + ' itens serão apagados';
+    if (mode === 'trash' || !settings.trash) {
+      var ok = await dialog({title: 'Excluir definitivamente?', msg: txt + ' do aparelho. Não dá para desfazer.', ok: 'Excluir', danger: 1});
+      if (ok && (await permanentDelete(list, false))) exitSel();
+    } else {
+      var now = Date.now();
+      list.forEach(function(it){ trash[it.key] = now; });
+      save('meddia_trash_v1', trash);
+      exitSel(); applyFilter();
+      toast(n === 1 ? 'Movida para a lixeira' : n + ' itens movidos para a lixeira', 'Desfazer', function(){
+        list.forEach(function(it){ delete trash[it.key]; });
+        save('meddia_trash_v1', trash); applyFilter();
+      });
+    }
+  }
+  function selRestore(){
+    var list = selList(); if (!list.length) return;
+    list.forEach(function(it){ delete trash[it.key]; });
+    save('meddia_trash_v1', trash);
+    exitSel(); applyFilter();
+    toast(list.length === 1 ? 'Restaurada' : list.length + ' itens restaurados');
+  }
+  $('selX').onclick = exitSel; $('selAll').onclick = selAll;
+  $('selShare').onclick = selShare; $('selDel').onclick = selDelete; $('selRestore').onclick = selRestore;
 
   file.onchange = function(){
     Array.prototype.forEach.call(file.files, function(f){
@@ -327,7 +412,14 @@ header h1{font-size:1.2rem;font-weight:700;margin:0;letter-spacing:.2px}
       if (fAlbum && it.album !== fAlbum) return false;
       return true;
     });
-    renderBanner(); renderChips(); render();
+    if (selMode) {
+      var vis = {}; items.forEach(function(it){ vis[it.key] = 1; });
+      Object.keys(sel).forEach(function(k){ if (!vis[k]) delete sel[k]; });
+    }
+    renderBanner(); renderChips(); render(); updateSelUI();
+    if (mode === 'gallery' && items.length && !load('meddia_hint_v1', 0)) {
+      save('meddia_hint_v1', 1); toast('Dica: segure uma foto para selecionar várias');
+    }
   }
 
   /* ---- Datas ---- */
@@ -441,7 +533,24 @@ header h1{font-size:1.2rem;font-weight:700;margin:0;letter-spacing:.2px}
     }
     var hb = document.createElement('span'); hb.className = 'hb'; hb.textContent = '♥'; hb.hidden = !favs[it.key];
     b.appendChild(hb); b._hb = hb; els[i] = b;
-    b.onclick = function(){ openAt(i); };
+    var ck = document.createElement('span'); ck.className = 'ck'; b.appendChild(ck);
+    if (sel[it.key]) b.classList.add('sel');
+    var lpT = null, lpX = 0, lpY = 0;
+    function lpStop(){ clearTimeout(lpT); }
+    b.addEventListener('pointerdown', function(e){
+      b._lp = false; lpX = e.clientX; lpY = e.clientY; clearTimeout(lpT);
+      if (selMode) return;
+      lpT = setTimeout(function(){ b._lp = true; enterSel(i); }, 450);
+    });
+    b.addEventListener('pointermove', function(e){ if (Math.hypot(e.clientX - lpX, e.clientY - lpY) > 10) lpStop(); });
+    b.addEventListener('pointerup', lpStop);
+    b.addEventListener('pointercancel', lpStop);
+    b.addEventListener('pointerleave', lpStop);
+    b.oncontextmenu = function(e){ e.preventDefault(); };
+    b.onclick = function(){
+      if (b._lp) { b._lp = false; return; }
+      if (selMode) toggleSel(i); else openAt(i);
+    };
     return b;
   }
 
@@ -730,6 +839,7 @@ header h1{font-size:1.2rem;font-weight:700;margin:0;letter-spacing:.2px}
   stage.addEventListener('wheel', function(e){ e.preventDefault(); zoom(e.deltaY < 0 ? 1.15 : 1/1.15); }, {passive:false});
 
   document.addEventListener('keydown', function(e){
+    if (selMode && !dlgResolve && e.key === 'Escape') { exitSel(); return; }
     if (!viewer.classList.contains('open') || dlgResolve) return;
     var k = e.key;
     if (k === 'Escape') closeViewer(false);
@@ -746,6 +856,7 @@ header h1{font-size:1.2rem;font-weight:700;margin:0;letter-spacing:.2px}
   // botão voltar do Android: fecha o que estiver aberto, passo a passo; por fim sai
   function handleBack(){
     if (dlgResolve) { dlgResolve(null); return true; }
+    if (selMode) { exitSel(); return true; }
     if (viewer.classList.contains('open')) { closeViewer(false); return true; }
     if (!$('settings').hidden) { closeSettings(); return true; }
     if (mode !== 'gallery') { setMode('gallery'); return true; }
