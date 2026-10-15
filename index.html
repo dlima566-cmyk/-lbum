@@ -56,16 +56,24 @@ header h1{font-size:1.35rem;font-weight:800;margin:0;letter-spacing:.015em;line-
 #btitle{flex:1;font-weight:700;font-size:1.05rem}
 
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:2px;padding:2px;flex:1;align-content:start}
-.dh{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:20px 10px 8px;font-size:.82rem;font-weight:600;color:var(--text);letter-spacing:.01em}
-.dh::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
-.dh{cursor:pointer;-webkit-user-select:none;user-select:none}
+.dh{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin-top:7px;padding:15px 12px 11px;
+  font-size:.86rem;font-weight:700;color:var(--text);letter-spacing:.015em;cursor:pointer;
+  border:1px solid var(--line);border-radius:10px;background:linear-gradient(100deg,rgba(91,155,255,.09),rgba(255,255,255,.015) 72%);
+  -webkit-user-select:none;user-select:none;transition:background .18s ease,border-color .18s ease,color .18s ease}
+.dh::before{content:'⌄';display:inline-block;flex:none;color:var(--sig);font-size:1rem;line-height:1;
+  transform:rotate(0deg);transition:transform .18s ease}
+.dh::after{content:'';flex:1;min-width:12px;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
+.dh:active{background:rgba(91,155,255,.14)}
+.dh:focus-visible{outline:2px solid var(--sig);outline-offset:2px}
+.dh.collapsed::before{transform:rotate(-90deg)}
+.dh.collapsed{background:rgba(255,255,255,.025);border-color:var(--line)}
 .dck{display:none;width:18px;height:18px;flex:none;border-radius:50%;border:1.5px solid rgba(255,255,255,.6)}
 #grid.selecting .dck{display:grid;place-items:center}
 .dh.on .dck{background:var(--sig);border-color:var(--sig)}
 .dh.on .dck::after{content:'✓';font-size:11px;font-weight:800;color:var(--ink);line-height:1}
 .thumb{position:relative;aspect-ratio:1;padding:0;border:0;background:var(--panel);overflow:hidden;border-radius:3px;
   -webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-.thumb img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;transition:transform .14s}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;transition:transform .18s ease,opacity .18s ease}
 .thumb:active img{transform:scale(.97)}
 .play{position:absolute;right:6px;bottom:6px;width:26px;height:26px;border-radius:50%;background:rgba(7,10,16,.62);
   -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.22);
@@ -103,8 +111,9 @@ header h1{font-size:1.35rem;font-weight:800;margin:0;letter-spacing:.015em;line-
 header .ib,#selbar .ib{border:1px solid var(--line);background:rgba(255,255,255,.04)}
 #selbar .ib:active,header .ib:active{background:rgba(91,155,255,.18)}
 
-#viewer{position:fixed;inset:0;background:#000;display:none;flex-direction:column;z-index:10}
-#viewer.open{display:flex}
+#viewer{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;z-index:10;
+  opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s ease,visibility 0s linear .18s}
+#viewer.open{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .18s ease,visibility 0s}
 #stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 #stage img{max-width:100%;max-height:100%;transform-origin:center;will-change:transform;pointer-events:none;-webkit-user-drag:none}
 #stage video{max-width:100%;max-height:100%;display:none}
@@ -131,7 +140,10 @@ header .ib,#selbar .ib{border:1px solid var(--line);background:rgba(255,255,255,
 #viewer.hide-ui .nav{opacity:0;pointer-events:none}
 @media (hover:none){.nav{display:none}}
 #viewer.isvid .nav{display:grid}
-@media (prefers-reduced-motion:reduce){.bar,.thumb img,.btn,.ib,.chip{transition:none}.dd{animation:none}}
+@media (prefers-reduced-motion:reduce){
+  .bar,.thumb img,.btn,.ib,.chip,.dh,#viewer{transition:none!important}
+  .dh::before,.dd{animation:none!important;transition:none!important}
+}
 
 #settings{position:fixed;inset:0;background:var(--bg);z-index:20;overflow:auto;padding:var(--top) 0 var(--bottom)}
 .sh{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
@@ -469,6 +481,18 @@ button.row:active{background:var(--raise)}
     heads.forEach(function(h){ h.classList.toggle('on', tot[h._lb] > 0 && sc[h._lb] === tot[h._lb]); });
     updateSelUI();
   }
+  // Períodos recolhidos ficam guardados no aparelho e não interferem com a seleção.
+  var collapsedPeriods = load('meddia_collapsed_periods_v1', {});
+  function togglePeriod(l, head){
+    collapsedPeriods[l] = !collapsedPeriods[l];
+    if (!collapsedPeriods[l]) delete collapsedPeriods[l];
+    save('meddia_collapsed_periods_v1', collapsedPeriods);
+    if (head) {
+      head.classList.toggle('collapsed', !!collapsedPeriods[l]);
+      head.setAttribute('aria-expanded', collapsedPeriods[l] ? 'false' : 'true');
+    }
+    els.forEach(function(el){ if (el && el._lb === l) el.hidden = !!collapsedPeriods[l]; });
+  }
   function toggleDay(l){
     var list = items.filter(function(it){ return lbl(it) === l; });
     if (!list.length) return;
@@ -752,6 +776,7 @@ button.row:active{background:var(--raise)}
     var it = items[i];
     var b = document.createElement('button');
     b.className = 'thumb'; b.setAttribute('aria-label', 'Abrir ' + it.name);
+    b._lb = lbl(it); b.hidden = !!collapsedPeriods[b._lb];
     var t = document.createElement('img'); t.alt = ''; t.decoding = 'async';
     b.appendChild(t);
     thumb(it, function(d){ if (d) t.src = d; else if (!it.video) t.src = it.url; });
@@ -800,8 +825,14 @@ button.row:active{background:var(--raise)}
         var h = document.createElement('div'); h.className = 'dh';
         var dk = document.createElement('span'); dk.className = 'dck'; h.appendChild(dk);
         h.appendChild(document.createTextNode(lb));
-        h._lb = lb; heads.push(h);
-        h.onclick = (function(l){ return function(){ toggleDay(l); }; })(lb);
+        h._lb = lb; h.setAttribute('role', 'button'); h.tabIndex = 0;
+        h.setAttribute('aria-label', (collapsedPeriods[lb] ? 'Expandir período ' : 'Recolher período ') + lb);
+        h.setAttribute('aria-expanded', collapsedPeriods[lb] ? 'false' : 'true');
+        h.classList.toggle('collapsed', !!collapsedPeriods[lb]); heads.push(h);
+        h.onclick = (function(l, head){ return function(){ if (selMode) toggleDay(l); else togglePeriod(l, head); }; })(lb, h);
+        h.onkeydown = (function(l, head){ return function(e){
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (selMode) toggleDay(l); else togglePeriod(l, head); }
+        }; })(lb, h);
         if (selMode) h.classList.toggle('on', items.every(function(it){ return lbl(it) !== lb || sel[it.key]; }));
         frag.appendChild(h);
       }
@@ -1034,9 +1065,7 @@ button.row:active{background:var(--raise)}
   $('sback').onclick = closeSettings;
   $('optTrash').onchange = function(){ settings.trash = $('optTrash').checked; save('meddia_settings_v1', settings); };
   $('optDays').onchange = function(){ settings.trashDays = parseInt($('optDays').value, 10); save('meddia_settings_v1', settings); };
-  var backToSettings = false;
-  function leaveMode(){ setMode('gallery'); if (backToSettings) { backToSettings = false; openSettings(); } }
-  $('openTrash').onclick = function(){ closeSettings(); backToSettings = true; setMode('trash'); };
+  $('openTrash').onclick = function(){ closeSettings(); setMode('trash'); };
   $('emptyTrash').onclick = emptyTrash;
   $('pwBtn').onclick = async function(){
     if (!pwHash) { if (await newPassword('Criar senha')) { toast('Senha criada'); renderSettings(); } return; }
@@ -1046,14 +1075,14 @@ button.row:active{background:var(--raise)}
   $('openVault').onclick = async function(){
     if (!pwHash && !(await newPassword('Criar senha'))) return;
     if (!(await unlock('Pasta bloqueada'))) return;
-    await loadVault(); closeSettings(); backToSettings = true; setMode('vault');
+    await loadVault(); closeSettings(); setMode('vault');
     var leg = all.filter(function(it){ return !trash[it.key] && isLocked(it) && it.key.indexOf('file://') === 0; });
     if (leg.length && native && P.Vault) {
       var okm = await dialog({title: 'Proteger de verdade?', msg: leg.length + (leg.length === 1 ? ' item está' : ' itens estão') + ' apenas escondido no MeDDia. Mover para o armazenamento privado do app? Eles deixam de aparecer em outras galerias.', ok: 'Mover'});
       if (okm) await vaultAdd(leg);
     }
   };
-  $('bback').onclick = leaveMode;
+  $('bback').onclick = function(){ setMode('gallery'); };
   $('bact').onclick = emptyTrash;
 
   // tranca a pasta bloqueada se o app ficar um tempo em segundo plano
@@ -1129,7 +1158,7 @@ button.row:active{background:var(--raise)}
     if (selMode) { exitSel(); return true; }
     if (viewer.classList.contains('open')) { closeViewer(false); return true; }
     if (!$('settings').hidden) { closeSettings(); return true; }
-    if (mode !== 'gallery') { leaveMode(); return true; }
+    if (mode !== 'gallery') { setMode('gallery'); return true; }
     if (fType !== 'all' || fAlbum) { fType = 'all'; fAlbum = null; applyFilter(); window.scrollTo(0, 0); return true; }
     return false;
   }
