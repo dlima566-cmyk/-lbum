@@ -242,6 +242,7 @@ button.row:active{background:var(--raise)}
     <label class="row"><span>Usar lixeira<small>Ao excluir, a foto vai para a lixeira e pode ser restaurada. Desligada, a exclusão é definitiva.</small></span><input type="checkbox" class="sw" id="optTrash"></label>
     <button class="row" id="openTrash"><span>Abrir lixeira</span><b id="trashN">0</b></button>
     <button class="row" id="emptyTrash"><span>Esvaziar lixeira</span></button>
+    <label class="row"><span>Esvaziar sozinha<small>Itens na lixeira há mais tempo que isso são apagados de vez. O app pergunta antes de excluir.</small></span><select id="optDays" style="background:var(--raise);color:var(--text);border:1px solid var(--line2);border-radius:8px;padding:8px;font:inherit"><option value="7">7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option><option value="60">60 dias</option><option value="90">90 dias</option><option value="0">Nunca</option></select></label>
 
     <h3>Pasta bloqueada</h3>
     <button class="row" id="pwBtn"><span id="pwLabel">Criar senha</span></button>
@@ -513,6 +514,22 @@ button.row:active{background:var(--raise)}
   document.addEventListener('pointerup', endDrag);
   document.addEventListener('pointercancel', endDrag);
   grid.addEventListener('touchmove', function(e){ if (drag && e.cancelable) e.preventDefault(); }, {passive: false});
+
+  /* pinça na galeria: afastar os dedos = fotos maiores (menos colunas) */
+  function curCols(){ return getComputedStyle(grid).gridTemplateColumns.split(' ').length; }
+  function setCols(n){ n = Math.max(2, Math.min(8, n)); settings.cols = n; save('meddia_settings_v1', settings); grid.style.gridTemplateColumns = 'repeat(' + n + ',1fr)'; }
+  if (settings.cols) grid.style.gridTemplateColumns = 'repeat(' + settings.cols + ',1fr)';
+  var pd = 0;
+  function tdist(e){ var a = e.touches[0], b = e.touches[1]; return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); }
+  grid.addEventListener('touchstart', function(e){ pd = e.touches.length === 2 ? tdist(e) : 0; }, {passive: true});
+  grid.addEventListener('touchmove', function(e){
+    if (e.touches.length !== 2 || !pd) return;
+    if (e.cancelable) e.preventDefault();
+    var r = tdist(e) / pd;
+    if (r > 1.3) { setCols(curCols() - 1); pd = tdist(e); }
+    else if (r < 0.75) { setCols(curCols() + 1); pd = tdist(e); }
+  }, {passive: false});
+  grid.addEventListener('touchend', function(){ pd = 0; });
   function enterSel(i){
     selMode = true; sel = {}; sel[items[i].key] = 1;
     try { if (navigator.vibrate) navigator.vibrate(15); } catch (e) {}
@@ -933,6 +950,18 @@ button.row:active{background:var(--raise)}
       if (ok2) await permanentDelete([it], true);
     }
   }
+  var purged = false;
+  async function autoPurge(){
+    var d = settings.trashDays === undefined ? 30 : settings.trashDays;
+    if (!d || viewer.classList.contains('open')) return;
+    if (settings.purgeAt && Date.now() - settings.purgeAt < 864e5) return;
+    var lim = Date.now() - d * 864e5;
+    var old = all.filter(function(it){ return trash[it.key] && trash[it.key] < lim; });
+    if (!old.length) return;
+    settings.purgeAt = Date.now(); save('meddia_settings_v1', settings);
+    var ok = await dialog({title: 'Esvaziar a lixeira?', msg: old.length + (old.length === 1 ? ' item está' : ' itens estão') + ' na lixeira há mais de ' + d + ' dias. Excluir agora? O Android vai pedir uma confirmação.', ok: 'Excluir', danger: 1});
+    if (ok) await permanentDelete(old, false);
+  }
   async function emptyTrash(){
     var list = all.filter(function(it){ return trash[it.key]; });
     if (!list.length) { toast('A lixeira já está vazia'); return; }
@@ -972,6 +1001,7 @@ button.row:active{background:var(--raise)}
   /* ---- Configurações ---- */
   function renderSettings(){
     $('optTrash').checked = !!settings.trash;
+    $('optDays').value = String(settings.trashDays === undefined ? 30 : settings.trashDays);
     $('trashN').textContent = all.filter(function(it){ return trash[it.key]; }).length;
     $('vaultN').textContent = vaultItems.length + all.filter(function(it){ return !trash[it.key] && isLocked(it); }).length;
     $('pwLabel').textContent = pwHash ? 'Alterar senha' : 'Criar senha';
@@ -1002,6 +1032,7 @@ button.row:active{background:var(--raise)}
   $('gear').onclick = openSettings;
   $('sback').onclick = closeSettings;
   $('optTrash').onchange = function(){ settings.trash = $('optTrash').checked; save('meddia_settings_v1', settings); };
+  $('optDays').onchange = function(){ settings.trashDays = parseInt($('optDays').value, 10); save('meddia_settings_v1', settings); };
   $('openTrash').onclick = function(){ closeSettings(); setMode('trash'); };
   $('emptyTrash').onclick = emptyTrash;
   $('pwBtn').onclick = async function(){
@@ -1154,6 +1185,7 @@ button.row:active{background:var(--raise)}
         var changed = sig(found) !== sig(all);
         if (changed && !viewer.classList.contains('open')) { all = found; applyFilter(); }
         saveCache(found);
+        if (!purged) { purged = true; autoPurge(); }
         if (!all.length) $('count').textContent = 'Nenhuma foto encontrada';
       } catch (e) {
         if (!all.length) $('count').textContent = 'Erro: ' + msgOf(e);
