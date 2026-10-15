@@ -20,11 +20,13 @@ jobs:
         run: mkdir -p www && cp -n index.html www/ || true
       - name: Instalar dependencias
         run: npm install
-      - name: Ativar modo galeria
+      - name: Ativar modo galeria e nome do app
         run: |
-          node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));c.plugins=Object.assign({},c.plugins,{Media:{androidGalleryMode:true}});fs.writeFileSync('capacitor.config.json',JSON.stringify(c,null,2))"
+          node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));c.appName='MeDDia';c.plugins=Object.assign({},c.plugins,{Media:{androidGalleryMode:true}});fs.writeFileSync('capacitor.config.json',JSON.stringify(c,null,2))"
       - name: Criar projeto Android
         run: npx cap add android
+      - name: Icones
+        run: unzip -o icons.zip -d android/app/src/main/res
       - name: Permissoes de galeria
         run: |
           sed -i 's#<application#<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /><uses-permission android:name="android.permission.READ_MEDIA_VIDEO" /><uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /><uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /><application#' android/app/src/main/AndroidManifest.xml
