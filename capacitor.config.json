@@ -1,8 +1,5 @@
 {
-  "appId": "com.seunome.visualizador",
+  "appId": "com.meddia.album",
   "appName": "MeDDia",
-  "webDir": "www",
-  "android": {
-    "allowMixedContent": false
-  }
+  "webDir": "www"
 }
