@@ -248,6 +248,7 @@ button.row:active{background:var(--raise)}
     <button class="row" id="pwBtn"><span id="pwLabel">Criar senha</span></button>
     <button class="row" id="openVault"><span>Abrir pasta bloqueada</span><b id="vaultN">0</b></button>
     <div class="row" style="display:block"><span>Álbuns bloqueados<small>Todo o conteúdo do álbum marcado vai para a pasta bloqueada.</small></span><div id="albList"></div></div>
+    <p class="note" id="ver">Versão do app: 4 (grade + lixeira automática)</p>
     <p class="note">As fotos bloqueadas são movidas para o armazenamento privado do MeDDia e deixam de aparecer em outros apps de galeria. Abra com a digital ou, se preferir, com a senha. Se esquecer a senha, não há como recuperá-la. Ao desinstalar o app ou limpar seus dados, as fotos da pasta são perdidas.</p>
   </div>
 </section>
@@ -1033,7 +1034,9 @@ button.row:active{background:var(--raise)}
   $('sback').onclick = closeSettings;
   $('optTrash').onchange = function(){ settings.trash = $('optTrash').checked; save('meddia_settings_v1', settings); };
   $('optDays').onchange = function(){ settings.trashDays = parseInt($('optDays').value, 10); save('meddia_settings_v1', settings); };
-  $('openTrash').onclick = function(){ closeSettings(); setMode('trash'); };
+  var backToSettings = false;
+  function leaveMode(){ setMode('gallery'); if (backToSettings) { backToSettings = false; openSettings(); } }
+  $('openTrash').onclick = function(){ closeSettings(); backToSettings = true; setMode('trash'); };
   $('emptyTrash').onclick = emptyTrash;
   $('pwBtn').onclick = async function(){
     if (!pwHash) { if (await newPassword('Criar senha')) { toast('Senha criada'); renderSettings(); } return; }
@@ -1043,14 +1046,14 @@ button.row:active{background:var(--raise)}
   $('openVault').onclick = async function(){
     if (!pwHash && !(await newPassword('Criar senha'))) return;
     if (!(await unlock('Pasta bloqueada'))) return;
-    await loadVault(); closeSettings(); setMode('vault');
+    await loadVault(); closeSettings(); backToSettings = true; setMode('vault');
     var leg = all.filter(function(it){ return !trash[it.key] && isLocked(it) && it.key.indexOf('file://') === 0; });
     if (leg.length && native && P.Vault) {
       var okm = await dialog({title: 'Proteger de verdade?', msg: leg.length + (leg.length === 1 ? ' item está' : ' itens estão') + ' apenas escondido no MeDDia. Mover para o armazenamento privado do app? Eles deixam de aparecer em outras galerias.', ok: 'Mover'});
       if (okm) await vaultAdd(leg);
     }
   };
-  $('bback').onclick = function(){ setMode('gallery'); };
+  $('bback').onclick = leaveMode;
   $('bact').onclick = emptyTrash;
 
   // tranca a pasta bloqueada se o app ficar um tempo em segundo plano
@@ -1126,7 +1129,7 @@ button.row:active{background:var(--raise)}
     if (selMode) { exitSel(); return true; }
     if (viewer.classList.contains('open')) { closeViewer(false); return true; }
     if (!$('settings').hidden) { closeSettings(); return true; }
-    if (mode !== 'gallery') { setMode('gallery'); return true; }
+    if (mode !== 'gallery') { leaveMode(); return true; }
     if (fType !== 'all' || fAlbum) { fType = 'all'; fAlbum = null; applyFilter(); window.scrollTo(0, 0); return true; }
     return false;
   }
