@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#070a10">
+<title>MeDDia</title>
+<style>
+:root{
+  --bg:#070a10; --panel:#101624; --raise:#161e30;
+  --line:rgba(150,180,255,.14); --line2:rgba(150,180,255,.28);
+  --text:#e6ecf8; --muted:#7f8ba4;
+  --sig:#5b9bff; --sig2:#6ff0e0; --ink:#04101f; --danger:#ff5c7a;
+  --accent:var(--sig); --glass:rgba(14,20,33,.80);
+  --top:env(safe-area-inset-top,0px); --bottom:env(safe-area-inset-bottom,0px);
+  box-sizing:border-box;
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent;
+  font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--sig);outline-offset:2px}
+
+#app{min-height:100%;display:flex;flex-direction:column;padding-bottom:var(--bottom)}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:calc(12px + var(--top)) 16px 12px;background:var(--glass);
+  -webkit-backdrop-filter:blur(16px) saturate(140%);backdrop-filter:blur(16px) saturate(140%);
+  border-bottom:1px solid var(--line);box-shadow:inset 0 -1px 0 rgba(91,155,255,.05)}
+header h1{font-size:1.35rem;font-weight:800;margin:0;letter-spacing:.015em;line-height:1.1}
+.dd{background:linear-gradient(100deg,var(--sig),var(--sig2));-webkit-background-clip:text;background-clip:text;
+  color:transparent;animation:glow 1.8s .25s ease-out 1 both}
+@keyframes glow{
+  0%{filter:drop-shadow(0 0 0 rgba(111,240,224,0))}
+  40%{filter:drop-shadow(0 0 10px rgba(111,240,224,.9))}
+  100%{filter:drop-shadow(0 0 6px rgba(111,240,224,.32))}
+}
+.count{color:var(--muted);font-size:.8rem;margin-top:3px;letter-spacing:.01em}
+.btn{background:var(--sig);color:var(--ink);border:0;border-radius:12px;padding:11px 18px;font-weight:650;
+  box-shadow:0 6px 22px -8px rgba(91,155,255,.7),inset 0 1px 0 rgba(255,255,255,.28);transition:transform .08s}
+.btn:active{transform:scale(.97)}
+.btn.ghost{background:rgba(255,255,255,.04);color:var(--text);border:1px solid var(--line2);box-shadow:none}
+.btn.danger{background:var(--danger);color:#240812;box-shadow:0 6px 22px -8px rgba(255,92,122,.7),inset 0 1px 0 rgba(255,255,255,.25)}
+
+.chips{display:flex;gap:8px;overflow-x:auto;padding:12px 12px 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:rgba(255,255,255,.035);border-radius:999px;padding:7px 15px;
+  font-size:.85rem;white-space:nowrap;color:var(--muted);transition:color .15s,background .15s}
+#chipsA .chip{font-size:.8rem;padding:5px 12px}
+.chip.on{background:var(--sig);color:var(--ink);border-color:transparent;font-weight:650;
+  box-shadow:0 4px 18px -4px rgba(91,155,255,.65)}
+
+#banner{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line)}
+#btitle{flex:1;font-weight:700;font-size:1.05rem}
+
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:2px;padding:2px;flex:1;align-content:start}
+.dh{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:20px 10px 8px;font-size:.82rem;font-weight:600;color:var(--text);letter-spacing:.01em}
+.dh::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
+.dh{cursor:pointer;-webkit-user-select:none;user-select:none}
+.dck{display:none;width:18px;height:18px;flex:none;border-radius:50%;border:1.5px solid rgba(255,255,255,.6)}
+#grid.selecting .dck{display:grid;place-items:center}
+.dh.on .dck{background:var(--sig);border-color:var(--sig)}
+.dh.on .dck::after{content:'✓';font-size:11px;font-weight:800;color:var(--ink);line-height:1}
+.thumb{position:relative;aspect-ratio:1;padding:0;border:0;background:var(--panel);overflow:hidden;border-radius:3px;
+  -webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;transition:transform .14s}
+.thumb:active img{transform:scale(.97)}
+.play{position:absolute;right:6px;bottom:6px;width:26px;height:26px;border-radius:50%;background:rgba(7,10,16,.62);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.22);
+  display:grid;place-items:center;font-size:10px;padding-left:1px;pointer-events:none}
+.hb{position:absolute;left:6px;top:4px;color:#ff6b81;font-size:16px;text-shadow:0 0 6px rgba(0,0,0,.8);pointer-events:none}
+.ck{position:absolute;left:11px;top:11px;width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,255,255,.85);
+  background:rgba(7,10,16,.4);display:none;place-items:center;font-size:12px;line-height:1;font-weight:800;color:var(--ink);pointer-events:none}
+#grid.selecting .ck{display:grid}
+#grid.selecting .hb{left:auto;right:8px;top:8px}
+.thumb.sel img{transform:scale(.86);border-radius:9px}
+.thumb.sel .ck{background:var(--sig);border-color:var(--sig)}
+.thumb.sel .ck::after{content:'✓'}
+.thumb.sel::before{content:'';position:absolute;inset:5px;z-index:1;pointer-events:none;
+  background:
+    linear-gradient(var(--sig),var(--sig)) 0 0/16px 2px,
+    linear-gradient(var(--sig),var(--sig)) 0 0/2px 16px,
+    linear-gradient(var(--sig),var(--sig)) 100% 0/16px 2px,
+    linear-gradient(var(--sig),var(--sig)) 100% 0/2px 16px,
+    linear-gradient(var(--sig),var(--sig)) 0 100%/16px 2px,
+    linear-gradient(var(--sig),var(--sig)) 0 100%/2px 16px,
+    linear-gradient(var(--sig),var(--sig)) 100% 100%/16px 2px,
+    linear-gradient(var(--sig),var(--sig)) 100% 100%/2px 16px;
+  background-repeat:no-repeat;filter:drop-shadow(0 0 4px rgba(91,155,255,.7))}
+#none{margin:48px 16px;text-align:center;color:var(--muted)}
+#empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:32px;text-align:center}
+#empty .vf{width:64px;height:64px;fill:none;stroke:var(--sig);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;
+  filter:drop-shadow(0 0 10px rgba(91,155,255,.45))}
+#empty p{margin:0;color:var(--muted);max-width:30ch}
+#empty strong{display:block;color:var(--text);font-size:1.25rem;font-weight:700;margin-bottom:8px}
+
+#selbar{display:flex;align-items:center;gap:6px;padding:calc(10px + var(--top)) 12px 10px;min-height:66px;
+  border-bottom:1px solid var(--line2);background:rgba(18,26,44,.88);
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);position:sticky;top:0;z-index:5}
+#selN{flex:1;font-weight:650;min-width:0}
+header .ib,#selbar .ib{border:1px solid var(--line);background:rgba(255,255,255,.04)}
+#selbar .ib:active,header .ib:active{background:rgba(91,155,255,.18)}
+
+#viewer{position:fixed;inset:0;background:#000;display:none;flex-direction:column;z-index:10}
+#viewer.open{display:flex}
+#stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#stage img{max-width:100%;max-height:100%;transform-origin:center;will-change:transform;pointer-events:none;-webkit-user-drag:none}
+#stage video{max-width:100%;max-height:100%;display:none}
+.bar{position:absolute;left:0;right:0;display:flex;align-items:center;gap:4px;padding:10px 12px;transition:opacity .2s}
+.bar.top{top:0;padding:calc(10px + var(--top)) 12px 26px;justify-content:space-between;
+  background:linear-gradient(to bottom,rgba(4,6,10,.88),rgba(4,6,10,.5) 60%,rgba(4,6,10,0))}
+.bar.bottom{left:50%;right:auto;transform:translateX(-50%);bottom:calc(16px + var(--bottom));justify-content:center;
+  padding:5px;border-radius:999px;background:rgba(16,22,36,.72);border:1px solid var(--line2);
+  -webkit-backdrop-filter:blur(16px) saturate(140%);backdrop-filter:blur(16px) saturate(140%);
+  box-shadow:0 12px 40px -10px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.07)}
+#viewer.hide-ui .bar{opacity:0;pointer-events:none}
+#viewer.isvid .bar.bottom{display:none}
+.ib{width:44px;height:44px;border-radius:50%;border:0;background:transparent;display:grid;place-items:center;flex:none;transition:background .12s}
+.ib:active{background:rgba(255,255,255,.14)}
+.ib[aria-pressed="true"]{background:rgba(91,155,255,.22);color:var(--sig);box-shadow:inset 0 0 0 1px rgba(91,155,255,.45)}
+#fav[aria-pressed="true"]{background:transparent;box-shadow:none;color:#ff6b81}
+#fav[aria-pressed="true"] svg{fill:currentColor}
+.ib svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+#tcol{flex:1;min-width:0;text-align:center}
+#title{font-size:.9rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pos{color:var(--muted);font-size:.75rem}
+.nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(16,22,36,.65);border:1px solid var(--line)}
+.nav.prev{left:8px}.nav.next{right:8px}
+#viewer.hide-ui .nav{opacity:0;pointer-events:none}
+@media (hover:none){.nav{display:none}}
+#viewer.isvid .nav{display:grid}
+@media (prefers-reduced-motion:reduce){.bar,.thumb img,.btn,.ib,.chip{transition:none}.dd{animation:none}}
+
+#settings{position:fixed;inset:0;background:var(--bg);z-index:20;overflow:auto;padding:var(--top) 0 var(--bottom)}
+.sh{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.sh h2{margin:0;font-size:1.1rem;font-weight:700}
+.sb{padding:4px 16px 48px}
+.sb h3{margin:26px 4px 10px;font-size:.85rem;font-weight:650;color:var(--sig);letter-spacing:.02em}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:0 0 8px;padding:14px 16px;
+  border:1px solid var(--line);border-radius:14px;background:var(--panel);text-align:left;font-size:1rem;color:var(--text);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+button.row:active{background:var(--raise)}
+.row small{display:block;color:var(--muted);font-size:.8rem;margin-top:3px;line-height:1.35}
+.row b{color:var(--muted);font-weight:600;min-width:1.5em;text-align:right}
+.row .row{margin:0;padding:12px 0;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none}
+.row .row:last-child{border-bottom:0;padding-bottom:2px}
+.note{color:var(--muted);font-size:.82rem;margin:16px 4px}
+.sw{-webkit-appearance:none;appearance:none;width:50px;height:30px;border-radius:15px;background:rgba(255,255,255,.1);
+  border:1px solid var(--line2);position:relative;flex:none;margin:0;transition:background .15s}
+.sw::after{content:'';position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;
+  box-shadow:0 2px 6px rgba(0,0,0,.4);transition:left .15s}
+.sw:checked{background:var(--sig);border-color:transparent;box-shadow:0 0 16px -2px rgba(91,155,255,.7)}
+.sw:checked::after{left:23px}
+
+#dlg{position:fixed;inset:0;background:rgba(4,6,10,.7);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  z-index:50;display:grid;place-items:center;padding:20px}
+#dlg .card{background:var(--panel);border:1px solid var(--line2);border-radius:20px;padding:20px;width:100%;max-width:340px;
+  display:grid;gap:12px;box-shadow:0 24px 70px -12px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.07)}
+#dlg h2{margin:0;font-size:1.1rem;font-weight:700}
+#dlg p{margin:0;color:var(--muted);font-size:.9rem}
+#dlg input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line2);background:var(--bg);color:var(--text);font:inherit}
+#dlg input:focus{outline:0;border-color:var(--sig);box-shadow:0 0 0 3px rgba(91,155,255,.25)}
+#dlg .r2{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+
+#toast{position:fixed;left:12px;right:12px;bottom:calc(18px + var(--bottom));z-index:60;background:rgba(20,28,46,.9);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid var(--line2);border-radius:14px;
+  padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:.9rem;
+  box-shadow:0 14px 40px -10px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.06)}
+#toast button{background:none;border:0;color:var(--sig2);font-weight:700;padding:4px 8px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="selbar" hidden>
+    <button class="ib" id="selX" aria-label="Cancelar seleção"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <span id="selN">0 selecionados</span>
+    <button class="ib" id="selAll" aria-label="Selecionar tudo"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/></svg></button>
+    <button class="ib" id="selShare" aria-label="Compartilhar"><svg viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4M5 12v7h14v-7"/></svg></button>
+    <button class="ib" id="selRestore" aria-label="Restaurar" hidden><svg viewBox="0 0 24 24"><path d="M9 14l-4-4 4-4M5 10h9a5 5 0 0 1 0 10h-3"/></svg></button>
+    <button class="ib" id="selLock" aria-label="Mover para a pasta bloqueada"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
+    <button class="ib" id="selDel" aria-label="Excluir"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg></button>
+  </div>
+  <header id="hdr">
+    <div>
+      <h1>Me<span class="dd">DD</span>ia</h1>
+      <div class="count" id="count">Nenhuma imagem</div>
+    </div>
+    <button class="ib" id="gear" aria-label="Configurações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+  </header>
+  <div id="banner" hidden>
+    <button class="btn ghost" id="bback">← Voltar</button>
+    <span id="btitle"></span>
+    <button class="btn ghost" id="bact" hidden>Esvaziar</button>
+  </div>
+  <div id="chips" hidden>
+    <div class="chips" id="chipsT"></div>
+    <div class="chips" id="chipsA" hidden></div>
+  </div>
+  <div id="empty">
+    <svg class="vf" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 22V12a4 4 0 0 1 4-4h10M42 8h10a4 4 0 0 1 4 4v10M56 42v10a4 4 0 0 1-4 4H42M22 56H12a4 4 0 0 1-4-4V42"/><circle cx="32" cy="32" r="8"/></svg>
+    <div><strong>Nenhuma foto ainda</strong><p>Escolha imagens do seu aparelho para vê-las aqui. Nada sai do seu dispositivo.</p></div>
+    <button class="btn" id="add2">Escolher fotos</button>
+  </div>
+  <p id="none" hidden>Nada por aqui neste filtro.</p>
+  <main id="grid" hidden></main>
+</div>
+
+<input type="file" id="file" accept="image/*,video/*" multiple hidden>
+
+<section id="viewer" aria-label="Visualizador" aria-modal="true" role="dialog">
+  <div id="stage"><img id="img" alt=""><video id="vid" controls playsinline></video></div>
+  <div class="bar top">
+    <button class="ib" id="close" aria-label="Fechar"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div id="tcol"><div id="title"></div><span id="pos"></span></div>
+    <button class="ib" id="restore" aria-label="Restaurar" hidden><svg viewBox="0 0 24 24"><path d="M9 14l-4-4 4-4M5 10h9a5 5 0 0 1 0 10h-3"/></svg></button>
+    <button class="ib" id="fav" aria-label="Favoritar" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.3-9.1C1.1 8.7 2.9 5 6.4 5c2 0 3.6 1.2 5.6 3.4C14 6.2 15.6 5 17.6 5c3.5 0 5.3 3.7 3.7 6.9C19 16.4 12 21 12 21z"/></svg></button>
+    <button class="ib" id="share" aria-label="Compartilhar"><svg viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4M5 12v7h14v-7"/></svg></button>
+    <button class="ib" id="lock" aria-label="Mover para a pasta bloqueada" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
+    <button class="ib" id="remove" aria-label="Excluir"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg></button>
+  </div>
+  <button class="ib nav prev" id="prev" aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <button class="ib nav next" id="next" aria-label="Próximo"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  <div class="bar bottom">
+    <button class="ib" id="zout" aria-label="Diminuir zoom"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5M8 11h6"/></svg></button>
+    <button class="ib" id="zin" aria-label="Aumentar zoom"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5M8 11h6M11 8v6"/></svg></button>
+    <button class="ib" id="rotl" aria-label="Girar para a esquerda"><svg viewBox="0 0 24 24"><path d="M3 4v6h6M3.5 10A9 9 0 1 1 5 17"/></svg></button>
+    <button class="ib" id="rotr" aria-label="Girar para a direita"><svg viewBox="0 0 24 24"><path d="M21 4v6h-6M20.5 10A9 9 0 1 0 19 17"/></svg></button>
+    <button class="ib" id="reset" aria-label="Ajustar à tela"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="ib" id="play" aria-label="Apresentação" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg></button>
+  </div>
+</section>
+
+<section id="settings" aria-label="Configurações" hidden>
+  <div class="sh">
+    <button class="ib" id="sback" aria-label="Voltar"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <h2>Configurações</h2>
+  </div>
+  <div class="sb">
+    <h3>Lixeira</h3>
+    <label class="row"><span>Usar lixeira<small>Ao excluir, a foto vai para a lixeira e pode ser restaurada. Desligada, a exclusão é definitiva.</small></span><input type="checkbox" class="sw" id="optTrash"></label>
+    <button class="row" id="openTrash"><span>Abrir lixeira</span><b id="trashN">0</b></button>
+    <button class="row" id="emptyTrash"><span>Esvaziar lixeira</span></button>
+
+    <h3>Pasta bloqueada</h3>
+    <button class="row" id="pwBtn"><span id="pwLabel">Criar senha</span></button>
+    <button class="row" id="openVault"><span>Abrir pasta bloqueada</span><b id="vaultN">0</b></button>
+    <div class="row" style="display:block"><span>Álbuns bloqueados<small>Todo o conteúdo do álbum marcado vai para a pasta bloqueada.</small></span><div id="albList"></div></div>
+    <p class="note">As fotos bloqueadas são movidas para o armazenamento privado do MeDDia e deixam de aparecer em outros apps de galeria. Abra com a digital ou, se preferir, com a senha. Se esquecer a senha, não há como recuperá-la. Ao desinstalar o app ou limpar seus dados, as fotos da pasta são perdidas.</p>
+  </div>
+</section>
+
+<div id="dlg" hidden>
+  <div class="card">
+    <h2 id="dt"></h2>
+    <p id="dm"></p>
+    <input id="di" type="password" autocomplete="off" hidden>
+    <input id="di2" type="password" autocomplete="off" hidden>
+    <div class="r2"><button class="btn ghost" id="dno">Cancelar</button><button class="btn" id="dyes">OK</button></div>
+  </div>
+</div>
+<div id="toast" hidden></div>
+
+<script>
+(function(){
+  function show(m){ try { var d = document.getElementById('__err') || document.body.appendChild(document.createElement('pre')); d.id = '__err';
+    d.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99999;margin:0;padding:12px;background:#300;color:#fff;font:12px monospace;white-space:pre-wrap;max-height:60%;overflow:auto';
+    d.textContent += m + '\n'; } catch (e) {} }
+  window.addEventListener('error', function(e){ show('ERRO: ' + e.message + ' (linha ' + e.lineno + ')'); });
+  window.addEventListener('unhandledrejection', function(e){ show('PROMESSA: ' + ((e.reason && e.reason.message) || e.reason)); });
+})();
+</script>
+<script>
+(function(){
+  var $ = function(id){return document.getElementById(id)};
+  var cap = window.Capacitor;
+  var native = !!(cap && cap.isNativePlatform && cap.isNativePlatform());
+  var P = (cap && cap.Plugins) || {};
+  var KEY = 'galeria_cache_v2';
+  function load(k, d){ try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
+  function save(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+  var all = [];             // tudo: {url, name, video, t, key, album}
+  var items = [];           // o que está na tela
+  var cur = 0;
+  var scale = 1, tx = 0, ty = 0, rot = 0;
+  var timer = null;
+  var fType = 'all', fAlbum = null;
+  var mode = 'gallery';     // gallery | vault | trash
+  var favs = load('galeria_fav_v1', {});
+  var trash = load('meddia_trash_v1', {});
+  var locked = load('meddia_locked_v1', {});
+  var lockedAlbums = load('meddia_lockalb_v1', {});
+  var settings = load('meddia_settings_v1', {});
+  if (settings.trash === undefined) settings.trash = true;
+  var pwHash = load('meddia_pw_v1', '');
+
+  function saveCache(list){
+    if (!native) return;
+    save(KEY, (list || all).filter(function(x){ return x.key.indexOf('file://') === 0; }).map(function(x){
+      return {u: x.key, n: x.name, v: x.video ? 1 : 0, t: x.t, a: x.album};
+    }));
+  }
+  function msgOf(e){ return (e && (e.message || e.code)) || String(e); }
+
+  /* ---- Pasta bloqueada de verdade (arquivos no armazenamento privado do app) ---- */
+  var vaultItems = [];
+  async function loadVault(){
+    vaultItems = [];
+    if (!native || !P.Vault) return;
+    try {
+      var r = await P.Vault.list();
+      vaultItems = (r.items || []).map(function(x){
+        return {url: cap.convertFileSrc('file://' + x.path), name: x.name, video: !!x.video, t: x.t || 0, key: 'vault:' + x.id, album: x.album || '', _vault: x.id};
+      }).sort(function(a, b){ return b.t - a.t; });
+    } catch (e) {}
+  }
+  async function unlock(title){
+    if (native && P.Vault) {
+      try {
+        var a = await P.Vault.available();
+        if (a.ok) {
+          try { await P.Vault.authenticate({title: title || 'Pasta bloqueada'}); return true; }
+          catch (e) { if (msgOf(e) !== 'senha') return false; }
+        }
+      } catch (e) {}
+    }
+    if (!pwHash) return newPassword('Criar senha');
+    return askPassword(title);
+  }
+  async function vaultAdd(list){
+    var real = list.filter(function(it){ return it.key.indexOf('file://') === 0; });
+    if (!real.length) { toast('Só dá para proteger fotos do aparelho'); return false; }
+    if (!P.Vault || !P.MediaDelete) { toast('Instale o APK novo para usar a pasta bloqueada'); return false; }
+    var metas = real.map(function(it){ return {path: decodeURI(it.key.replace('file://', '')), name: it.name, t: it.t, album: it.album || '', video: it.video ? 1 : 0}; });
+    var r;
+    try { r = await P.Vault.moveIn({items: metas}); }
+    catch (e) { toast('Não foi possível mover: ' + msgOf(e)); return false; }
+    try { await P.MediaDelete.deleteFiles({paths: metas.map(function(m){ return m.path; })}); }
+    catch (e) {
+      try { await P.Vault.discard({ids: r.ids}); } catch (e2) {}
+      toast('Cancelado: as fotos continuam na galeria'); return false;
+    }
+    real.forEach(function(it){
+      var i = all.indexOf(it); if (i >= 0) all.splice(i, 1);
+      delete locked[it.key]; delete favs[it.key]; delete trash[it.key];
+    });
+    save('meddia_locked_v1', locked); save('galeria_fav_v1', favs); save('meddia_trash_v1', trash); saveCache();
+    await loadVault(); applyFilter();
+    toast(real.length === 1 ? 'Movida para a pasta bloqueada' : real.length + ' itens movidos para a pasta bloqueada');
+    return true;
+  }
+  async function vaultRestore(list){
+    var v = list.filter(function(it){ return it._vault; });
+    if (!v.length) return false;
+    try { await P.Vault.moveOut({ids: v.map(function(it){ return it._vault; })}); }
+    catch (e) { toast('Não foi possível tirar da pasta: ' + msgOf(e)); return false; }
+    await loadVault(); applyFilter();
+    setTimeout(function(){ if (window.__scan) window.__scan(); }, 1500);
+    toast(v.length === 1 ? 'Tirada da pasta bloqueada' : v.length + ' itens devolvidos à galeria');
+    return true;
+  }
+  async function vaultRemove(list){
+    var v = list.filter(function(it){ return it._vault; });
+    if (v.length) {
+      try { await P.Vault.remove({ids: v.map(function(it){ return it._vault; })}); }
+      catch (e) { toast('Não foi possível excluir: ' + msgOf(e)); return false; }
+      await loadVault();
+    }
+    var leg = list.filter(function(it){ return !it._vault; });
+    if (leg.length) return permanentDelete(leg, false);
+    applyFilter(); toast(v.length === 1 ? 'Excluída' : v.length + ' itens excluídos');
+    return true;
+  }
+
+  var file = $('file'), grid = $('grid'), empty = $('empty'), viewer = $('viewer'),
+      stage = $('stage'), img = $('img'), vid = $('vid'),
+      chipsT = $('chipsT'), chipsA = $('chipsA');
+
+  /* ---- Avisos e diálogos ---- */
+  var toastEl = $('toast'), toastTimer = null;
+  function toast(msg, label, fn){
+    toastEl.innerHTML = '';
+    var s = document.createElement('span'); s.textContent = msg; toastEl.appendChild(s);
+    if (label) {
+      var b = document.createElement('button'); b.textContent = label;
+      b.onclick = function(){ toastEl.hidden = true; if (fn) fn(); };
+      toastEl.appendChild(b);
+    }
+    toastEl.hidden = false; clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.hidden = true; }, label ? 5000 : 3200);
+  }
+  var dlgResolve = null;
+  function dialog(o){
+    return new Promise(function(res){
+      var i1 = $('di'), i2 = $('di2');
+      $('dt').textContent = o.title || ''; $('dm').textContent = o.msg || '';
+      $('dm').hidden = !o.msg;
+      i1.hidden = !(o.inputs >= 1); i2.hidden = !(o.inputs >= 2);
+      i1.value = ''; i2.value = '';
+      i1.placeholder = o.ph1 || 'Senha'; i2.placeholder = o.ph2 || 'Repita a senha';
+      $('dyes').textContent = o.ok || 'OK'; $('dyes').className = 'btn' + (o.danger ? ' danger' : '');
+      $('dlg').hidden = false;
+      if (o.inputs) setTimeout(function(){ i1.focus(); }, 60);
+      dlgResolve = function(v){ $('dlg').hidden = true; dlgResolve = null; res(v); };
+      $('dyes').onclick = function(){ dlgResolve({a: i1.value, b: i2.value}); };
+      $('dno').onclick = function(){ dlgResolve(null); };
+    });
+  }
+
+  /* ---- Senha da pasta bloqueada ---- */
+  async function sha(s){
+    var b = new TextEncoder().encode('meddia:' + s);
+    var h = await crypto.subtle.digest('SHA-256', b);
+    return Array.prototype.map.call(new Uint8Array(h), function(x){ return ('0' + x.toString(16)).slice(-2); }).join('');
+  }
+  async function newPassword(title){
+    var r = await dialog({title: title || 'Criar senha', msg: 'Use pelo menos 4 caracteres. Anote em local seguro: não há como recuperá-la.', inputs: 2, ok: 'Salvar'});
+    if (!r) return false;
+    if (r.a.length < 4) { toast('Use pelo menos 4 caracteres'); return false; }
+    if (r.a !== r.b) { toast('As senhas não são iguais'); return false; }
+    pwHash = await sha(r.a); save('meddia_pw_v1', pwHash); return true;
+  }
+  async function ensurePassword(){ return pwHash ? true : newPassword('Criar senha'); }
+  async function askPassword(title){
+    var r = await dialog({title: title || 'Digite a senha', inputs: 1, ok: 'Confirmar'});
+    if (!r) return false;
+    if ((await sha(r.a)) === pwHash) return true;
+    toast('Senha incorreta'); return false;
+  }
+
+  /* ---- Listas por modo ---- */
+  function isLocked(it){ return !!(locked[it.key] || (it.album && lockedAlbums[it.album])); }
+  function baseList(){
+    if (mode === 'trash') return all.filter(function(it){ return trash[it.key]; });
+    if (mode === 'vault') return vaultItems.concat(all.filter(function(it){ return !trash[it.key] && isLocked(it); })).sort(function(a, b){ return b.t - a.t; });
+    return all.filter(function(it){ return !trash[it.key] && !isLocked(it); });
+  }
+  function setMode(m){ mode = m; fType = 'all'; fAlbum = null; selMode = false; sel = {}; applyFilter(); window.scrollTo(0, 0); }
+
+  /* ---- Seleção múltipla ---- */
+  var selMode = false, sel = {};
+  function selList(){ return items.filter(function(it){ return sel[it.key]; }); }
+  function updateSelUI(){
+    var n = selList().length;
+    $('hdr').hidden = selMode; $('selbar').hidden = !selMode;
+    grid.classList.toggle('selecting', selMode);
+    $('selN').textContent = n + (n === 1 ? ' selecionado' : ' selecionados');
+    var t = mode === 'trash';
+    $('selShare').hidden = t; $('selRestore').hidden = !(t || mode === 'vault'); $('selLock').hidden = mode !== 'gallery';
+    $('selRestore').setAttribute('aria-label', t ? 'Restaurar' : 'Tirar da pasta bloqueada');
+    $('selDel').setAttribute('aria-label', t ? 'Excluir definitivamente' : (settings.trash ? 'Mover para a lixeira' : 'Excluir'));
+  }
+  function lbl(it){ return it._dl || (it._dl = dayLabel(it.t)); }
+  function refreshSel(){
+    for (var i = 0; i < els.length; i++) {
+      if (els[i] && items[i]) els[i].classList.toggle('sel', !!sel[items[i].key]);
+    }
+    var tot = {}, sc = {};
+    items.forEach(function(it){ var l = lbl(it); tot[l] = (tot[l] || 0) + 1; if (sel[it.key]) sc[l] = (sc[l] || 0) + 1; });
+    heads.forEach(function(h){ h.classList.toggle('on', tot[h._lb] > 0 && sc[h._lb] === tot[h._lb]); });
+    updateSelUI();
+  }
+  function toggleDay(l){
+    var list = items.filter(function(it){ return lbl(it) === l; });
+    if (!list.length) return;
+    var allOn = list.every(function(it){ return sel[it.key]; });
+    if (!selMode) { selMode = true; sel = {}; }
+    list.forEach(function(it){ if (allOn) delete sel[it.key]; else sel[it.key] = 1; });
+    refreshSel();
+    if (!selList().length) exitSel();
+  }
+
+  /* arrastar o dedo para marcar (ou desmarcar) um intervalo */
+  var drag = null, dragTimer = null;
+  function dragUpdate(){
+    if (!drag) return;
+    var el = document.elementFromPoint(drag.x, drag.y);
+    var t = el && el.closest ? el.closest('.thumb') : null;
+    if (!t || t._i == null || t._i === drag.last) return;
+    drag.last = t._i;
+    var lo = Math.min(drag.anchor, t._i), hi = Math.max(drag.anchor, t._i), ns = {}, k;
+    for (k in drag.base) ns[k] = 1;
+    for (var j = lo; j <= hi; j++) {
+      if (!items[j]) continue;
+      if (drag.mode === 'add') ns[items[j].key] = 1; else delete ns[items[j].key];
+    }
+    sel = ns; refreshSel();
+  }
+  function startDrag(i, mode, x, y){
+    var base = {}, k; for (k in sel) base[k] = 1;
+    drag = {anchor: i, mode: mode, base: base, last: i, x: x, y: y};
+    clearInterval(dragTimer);
+    dragTimer = setInterval(function(){
+      if (!drag) return;
+      var h = window.innerHeight;
+      if (drag.y < 110) window.scrollBy(0, -14); else if (drag.y > h - 110) window.scrollBy(0, 14); else return;
+      dragUpdate();
+    }, 16);
+  }
+  function endDrag(){
+    if (!drag) return;
+    drag = null; clearInterval(dragTimer);
+    if (selMode && !selList().length) exitSel();
+  }
+  document.addEventListener('pointermove', function(e){ if (drag) { drag.x = e.clientX; drag.y = e.clientY; dragUpdate(); } });
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
+  grid.addEventListener('touchmove', function(e){ if (drag && e.cancelable) e.preventDefault(); }, {passive: false});
+  function enterSel(i){
+    selMode = true; sel = {}; sel[items[i].key] = 1;
+    try { if (navigator.vibrate) navigator.vibrate(15); } catch (e) {}
+    refreshSel();
+  }
+  function exitSel(){ selMode = false; sel = {}; refreshSel(); }
+  function toggleSel(i){
+    var k = items[i].key;
+    if (sel[k]) delete sel[k]; else sel[k] = 1;
+    refreshSel();
+    if (!selList().length) exitSel();
+  }
+  function selAll(){
+    var every = items.length > 0 && selList().length === items.length;
+    if (every) { exitSel(); return; }
+    items.forEach(function(it){ sel[it.key] = 1; });
+    refreshSel();
+  }
+  async function selShare(){
+    var list = selList().filter(function(it){ return it.key.indexOf('file://') === 0; });
+    if (!P.Share || !list.length) { toast('Compartilhar funciona no app instalado, com arquivos do aparelho'); return; }
+    try { await P.Share.share({files: list.map(function(it){ return it.key; }), dialogTitle: 'Compartilhar'}); }
+    catch (e) { var m = msgOf(e); if (!/cancel/i.test(m)) toast('Não foi possível compartilhar: ' + m); }
+  }
+  async function selDelete(){
+    var list = selList(); if (!list.length) return;
+    var n = list.length, txt = n === 1 ? '1 item será apagado' : n + ' itens serão apagados';
+    if (mode === 'vault') {
+      var okv = await dialog({title: 'Excluir definitivamente?', msg: txt + '. Não dá para desfazer.', ok: 'Excluir', danger: 1});
+      if (okv && (await vaultRemove(list))) exitSel();
+      return;
+    }
+    if (mode === 'trash' || !settings.trash) {
+      var ok = await dialog({title: 'Excluir definitivamente?', msg: txt + ' do aparelho. Não dá para desfazer.', ok: 'Excluir', danger: 1});
+      if (ok && (await permanentDelete(list, false))) exitSel();
+    } else {
+      var now = Date.now();
+      list.forEach(function(it){ trash[it.key] = now; });
+      save('meddia_trash_v1', trash);
+      exitSel(); applyFilter();
+      toast(n === 1 ? 'Movida para a lixeira' : n + ' itens movidos para a lixeira', 'Desfazer', function(){
+        list.forEach(function(it){ delete trash[it.key]; });
+        save('meddia_trash_v1', trash); applyFilter();
+      });
+    }
+  }
+  async function selRestore(){
+    var list = selList(); if (!list.length) return;
+    if (mode === 'vault') { if (await vaultRestore(list.filter(function(it){ return it._vault; }))) exitSel(); return; }
+    list.forEach(function(it){ delete trash[it.key]; });
+    save('meddia_trash_v1', trash);
+    exitSel(); applyFilter();
+    toast(list.length === 1 ? 'Restaurada' : list.length + ' itens restaurados');
+  }
+  $('selX').onclick = exitSel; $('selAll').onclick = selAll;
+  $('selLock').onclick = async function(){ var l = selList(); if (!l.length) return; if (!(await ensurePassword())) return; if (await vaultAdd(l)) exitSel(); };
+  $('selShare').onclick = selShare; $('selDel').onclick = selDelete; $('selRestore').onclick = selRestore;
+
+  file.onchange = function(){
+    Array.prototype.forEach.call(file.files, function(f){
+      var isV = f.type.indexOf('video/') === 0;
+      if (isV || f.type.indexOf('image/') === 0) {
+        var u = URL.createObjectURL(f);
+        all.unshift({url: u, name: f.name, video: isV, t: f.lastModified || Date.now(), key: u, album: 'Adicionadas'});
+      }
+    });
+    file.value = '';
+    applyFilter();
+  };
+  $('add2').onclick = function(){ file.click(); };
+
+  /* ---- Filtros ---- */
+  function chip(label, on, fn){
+    var b = document.createElement('button');
+    b.className = 'chip' + (on ? ' on' : ''); b.textContent = label; b.onclick = fn;
+    return b;
+  }
+  function renderChips(){
+    var base = baseList();
+    $('chips').hidden = mode !== 'gallery' || base.length === 0;
+    chipsT.innerHTML = '';
+    [['all','Tudo'],['img','Fotos'],['vid','Vídeos'],['fav','♥ Favoritos']].forEach(function(x){
+      chipsT.appendChild(chip(x[1], fType === x[0], function(){ fType = x[0]; applyFilter(); }));
+    });
+    var cnt = {}, names = [];
+    base.forEach(function(it){ var a = it.album; if (!a) return; if (!cnt[a]) { cnt[a] = 0; names.push(a); } cnt[a]++; });
+    names.sort(function(a, b){ return cnt[b] - cnt[a]; });
+    chipsA.innerHTML = ''; chipsA.hidden = names.length < 2;
+    chipsA.appendChild(chip('Todos os álbuns', !fAlbum, function(){ fAlbum = null; applyFilter(); }));
+    names.forEach(function(n){
+      chipsA.appendChild(chip(n + ' (' + cnt[n] + ')', fAlbum === n, function(){ fAlbum = n; applyFilter(); }));
+    });
+  }
+  function renderBanner(){
+    $('banner').hidden = mode === 'gallery';
+    $('btitle').textContent = mode === 'trash' ? 'Lixeira' : 'Pasta bloqueada';
+    $('bact').hidden = mode !== 'trash';
+  }
+  function applyFilter(){
+    var base = baseList();
+    if (fAlbum && !base.some(function(i){ return i.album === fAlbum; })) fAlbum = null;
+    items = mode !== 'gallery' ? base : base.filter(function(it){
+      if (fType === 'img' && it.video) return false;
+      if (fType === 'vid' && !it.video) return false;
+      if (fType === 'fav' && !favs[it.key]) return false;
+      if (fAlbum && it.album !== fAlbum) return false;
+      return true;
+    });
+    if (selMode) {
+      var vis = {}; items.forEach(function(it){ vis[it.key] = 1; });
+      Object.keys(sel).forEach(function(k){ if (!vis[k]) delete sel[k]; });
+    }
+    renderBanner(); renderChips(); render(); updateSelUI();
+    if (mode === 'gallery' && items.length && !load('meddia_hint_v2', 0)) {
+      save('meddia_hint_v2', 1); toast('Dica: segure uma foto e arraste, ou toque no título do dia');
+    }
+  }
+
+  /* ---- Datas ---- */
+  var MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var DIAS = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  function dayLabel(t){
+    if (!t) return 'Sem data';
+    var d = new Date(t < 1e12 ? t * 1000 : t), n = new Date();
+    var d0 = new Date(d.getFullYear(), d.getMonth(), d.getDate()), n0 = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+    var diff = Math.round((n0 - d0) / 864e5);
+    if (diff <= 0) return 'Hoje';
+    if (diff === 1) return 'Ontem';
+    if (diff < 7) return DIAS[d.getDay()];
+    return MESES[d.getMonth()] + ' de ' + d.getFullYear();
+  }
+
+  /* ---- Miniaturas (geradas uma vez e guardadas no aparelho) ---- */
+  var db = null;
+  function idb(cb){
+    if (db) return cb(db);
+    try {
+      var r = indexedDB.open('meddia-thumbs', 1);
+      r.onupgradeneeded = function(){ r.result.createObjectStore('t'); };
+      r.onsuccess = function(){ db = r.result; cb(db); };
+      r.onerror = function(){ cb(null); };
+    } catch (e) { cb(null); }
+  }
+  function tget(k, cb){
+    idb(function(d){
+      if (!d) return cb(null);
+      try {
+        var q = d.transaction('t').objectStore('t').get(k);
+        q.onsuccess = function(){ cb(q.result || null); };
+        q.onerror = function(){ cb(null); };
+      } catch (e) { cb(null); }
+    });
+  }
+  function tput(k, v){
+    idb(function(d){ if (!d) return; try { d.transaction('t', 'readwrite').objectStore('t').put(v, k); } catch (e) {} });
+  }
+  function toSquare(src, w, h){
+    var s = Math.min(w, h), c = document.createElement('canvas');
+    c.width = 240; c.height = 240;
+    c.getContext('2d').drawImage(src, (w - s) / 2, (h - s) / 2, s, s, 0, 0, 240, 240);
+    return c.toDataURL('image/jpeg', 0.7);
+  }
+  function makeImgThumb(url, cb){
+    var im = new Image(), done = false, to = null;
+    function end(d){ if (done) return; done = true; clearTimeout(to); im.onload = im.onerror = null; cb(d); }
+    to = setTimeout(function(){ end(null); }, 10000);
+    im.onerror = function(){ end(null); };
+    im.onload = function(){
+      try { end(toSquare(im, im.naturalWidth, im.naturalHeight)); } catch (e) { end(null); }
+    };
+    im.decoding = 'async'; im.src = url;
+  }
+  function makeVideoThumb(url, cb){
+    var v = document.createElement('video'), done = false, to = null;
+    v.muted = true; v.preload = 'auto'; v.setAttribute('playsinline', '');
+    function end(d){
+      if (done) return; done = true; clearTimeout(to);
+      v.onerror = v.onloadeddata = v.onseeked = null; v.removeAttribute('src'); v.load(); cb(d);
+    }
+    to = setTimeout(function(){ end(null); }, 6000);
+    v.onerror = function(){ end(null); };
+    v.onloadeddata = function(){
+      try { v.currentTime = Math.max(0.1, Math.min(1, (v.duration || 2) / 2)); } catch (e) { end(null); }
+    };
+    v.onseeked = function(){
+      try { end(toSquare(v, v.videoWidth || 16, v.videoHeight || 9)); } catch (e) { end(null); }
+    };
+    v.src = url;
+  }
+  var tq = [], tbusy = 0, tmem = {};
+  function thumb(it, cb){
+    if (tmem[it.url]) return cb(tmem[it.url]);
+    tq.push({it: it, cb: cb}); tpump();
+  }
+  function tpump(){
+    while (tbusy < 3 && tq.length){
+      (function(job){
+        tbusy++;
+        var k = job.it.url, blob = k.indexOf('blob:') === 0;
+        function fin(d){ if (d) tmem[k] = d; job.cb(d); tbusy--; tpump(); }
+        function gen(){
+          (job.it.video ? makeVideoThumb : makeImgThumb)(k, function(d){ if (d && !blob) tput(k, d); fin(d); });
+        }
+        if (blob) gen(); else tget(k, function(d){ if (d) fin(d); else gen(); });
+      })(tq.shift());
+    }
+  }
+
+  /* ---- Grade (carrega aos poucos para abrir rápido) ---- */
+  var PAGE = 90, shown = 0, lastKey = null, els = [], heads = [];
+  var sentinel = document.createElement('div');
+  sentinel.style.cssText = 'grid-column:1/-1;height:1px';
+  var io = ('IntersectionObserver' in window)
+    ? new IntersectionObserver(function(es){ if (es[0].isIntersecting) addThumbs(); }, {rootMargin: '800px'})
+    : null;
+  if (io) io.observe(sentinel);
+
+  function makeThumb(i){
+    var it = items[i];
+    var b = document.createElement('button');
+    b.className = 'thumb'; b.setAttribute('aria-label', 'Abrir ' + it.name);
+    var t = document.createElement('img'); t.alt = ''; t.decoding = 'async';
+    b.appendChild(t);
+    thumb(it, function(d){ if (d) t.src = d; else if (!it.video) t.src = it.url; });
+    if (it.video){
+      var p = document.createElement('span'); p.className = 'play'; p.textContent = '▶'; b.appendChild(p);
+    }
+    var hb = document.createElement('span'); hb.className = 'hb'; hb.textContent = '♥'; hb.hidden = !favs[it.key];
+    b.appendChild(hb); b._hb = hb; els[i] = b;
+    var ck = document.createElement('span'); ck.className = 'ck'; b.appendChild(ck);
+    if (sel[it.key]) b.classList.add('sel');
+    var lpT = null, lpX = 0, lpY = 0;
+    function lpStop(){ clearTimeout(lpT); }
+    b._i = i;
+    b.addEventListener('pointerdown', function(e){
+      b._lp = false; lpX = e.clientX; lpY = e.clientY; clearTimeout(lpT);
+      var px = e.clientX, py = e.clientY;
+      lpT = setTimeout(function(){
+        b._lp = true;
+        if (!selMode) { enterSel(i); startDrag(i, 'add', px, py); return; }
+        var k = items[i].key, on = !sel[k];
+        if (on) sel[k] = 1; else delete sel[k];
+        try { if (navigator.vibrate) navigator.vibrate(15); } catch (er) {}
+        refreshSel();
+        startDrag(i, on ? 'add' : 'del', px, py);
+      }, 450);
+    });
+    b.addEventListener('pointermove', function(e){ if (Math.hypot(e.clientX - lpX, e.clientY - lpY) > 10) lpStop(); });
+    b.addEventListener('pointerup', lpStop);
+    b.addEventListener('pointercancel', lpStop);
+    b.addEventListener('pointerleave', lpStop);
+    b.oncontextmenu = function(e){ e.preventDefault(); };
+    b.onclick = function(){
+      if (b._lp) { b._lp = false; return; }
+      if (selMode) toggleSel(i); else openAt(i);
+    };
+    return b;
+  }
+
+  function addThumbs(){
+    if (sentinel.parentNode) sentinel.parentNode.removeChild(sentinel);
+    var frag = document.createDocumentFragment(), end = Math.min(items.length, shown + PAGE);
+    for (var i = shown; i < end; i++) {
+      var lb = lbl(items[i]);
+      if (lb !== lastKey) {
+        lastKey = lb;
+        var h = document.createElement('div'); h.className = 'dh';
+        var dk = document.createElement('span'); dk.className = 'dck'; h.appendChild(dk);
+        h.appendChild(document.createTextNode(lb));
+        h._lb = lb; heads.push(h);
+        h.onclick = (function(l){ return function(){ toggleDay(l); }; })(lb);
+        if (selMode) h.classList.toggle('on', items.every(function(it){ return lbl(it) !== lb || sel[it.key]; }));
+        frag.appendChild(h);
+      }
+      frag.appendChild(makeThumb(i));
+    }
+    shown = end;
+    grid.appendChild(frag);
+    if (shown < items.length) grid.appendChild(sentinel);
+  }
+
+  function countText(){
+    var v = items.filter(function(i){ return i.video; }).length, p = items.length - v, a = [];
+    if (p) a.push(p + (p === 1 ? ' foto' : ' fotos'));
+    if (v) a.push(v + (v === 1 ? ' vídeo' : ' vídeos'));
+    return a.length ? a.join(' · ') : (all.length ? 'Nenhum item' : 'Nenhuma imagem');
+  }
+
+  function render(){
+    tq.length = 0;
+    var n = items.length;
+    $('count').textContent = countText();
+    empty.hidden = all.length > 0;
+    $('none').textContent = mode === 'trash' ? 'A lixeira está vazia.' : mode === 'vault' ? 'Nada na pasta bloqueada.' : 'Nada por aqui neste filtro.';
+    $('none').hidden = !(all.length > 0 && n === 0);
+    grid.hidden = n === 0;
+    grid.innerHTML = ''; shown = 0; lastKey = null; els = []; heads = [];
+    addThumbs();
+  }
+
+  /* ---- Visualizador ---- */
+  var vOpen = false;
+  function apply(){
+    var odd = (Math.abs(rot / 90) % 2) === 1;
+    img.style.maxWidth = odd ? stage.clientHeight + 'px' : '100%';
+    img.style.maxHeight = odd ? stage.clientWidth + 'px' : '100%';
+    img.style.transform = 'translate(' + tx + 'px,' + ty + 'px) rotate(' + rot + 'deg) scale(' + scale + ')';
+  }
+  function resetView(){ scale = 1; tx = 0; ty = 0; rot = 0; apply(); }
+  function stopVideo(){ vid.pause(); vid.removeAttribute('src'); vid.load(); vid.style.display = 'none'; }
+  function syncFav(){
+    var it = items[cur];
+    $('fav').setAttribute('aria-pressed', it && favs[it.key] ? 'true' : 'false');
+  }
+  function syncBtns(){
+    var t = mode === 'trash';
+    $('fav').hidden = t; $('share').hidden = t; $('lock').hidden = t; $('restore').hidden = !t;
+    $('lock').setAttribute('aria-pressed', mode === 'vault' ? 'true' : 'false');
+    $('lock').setAttribute('aria-label', mode === 'vault' ? 'Tirar da pasta bloqueada' : 'Mover para a pasta bloqueada');
+    $('remove').setAttribute('aria-label', t ? 'Excluir definitivamente' : (settings.trash ? 'Mover para a lixeira' : 'Excluir'));
+  }
+  function toggleFav(){
+    var it = items[cur]; if (!it) return;
+    if (favs[it.key]) delete favs[it.key]; else favs[it.key] = 1;
+    save('galeria_fav_v1', favs); syncFav();
+    var b = els[cur]; if (b && b._hb) b._hb.hidden = !favs[it.key];
+  }
+  function show(i){
+    cur = (i + items.length) % items.length;
+    var it = items[cur];
+    viewer.classList.toggle('isvid', !!it.video);
+    if (it.video){
+      stopShow(); viewer.classList.remove('hide-ui');
+      img.removeAttribute('src'); img.style.display = 'none';
+      vid.style.display = 'block'; vid.src = it.url;
+      var pr = vid.play(); if (pr && pr.catch) pr.catch(function(){});
+    } else {
+      stopVideo(); img.style.display = 'block';
+      img.src = it.url; img.alt = it.name;
+    }
+    $('title').textContent = it.name;
+    $('pos').textContent = (cur + 1) + '/' + items.length;
+    syncFav(); syncBtns();
+    scale = 1; tx = 0; ty = 0; rot = 0; apply();
+  }
+  function openAt(i){
+    viewer.classList.add('open'); viewer.classList.remove('hide-ui'); show(i);
+    if (!vOpen) { vOpen = true; try { history.pushState({v: 1}, ''); } catch (e) {} }
+  }
+  function closeViewer(fromPop){
+    stopShow(); stopVideo(); viewer.classList.remove('open'); viewer.classList.remove('isvid');
+    if (vOpen) { vOpen = false; if (!fromPop) { try { history.back(); } catch (e) {} } }
+  }
+  function next(){ if (items.length) show(cur + 1); }
+  function prev(){ if (items.length) show(cur - 1); }
+  function zoom(f){ scale = Math.min(8, Math.max(1, scale * f)); if (scale === 1){tx = 0; ty = 0;} apply(); }
+  function dropCurrent(){
+    stopShow(); items.splice(cur, 1); renderChips(); render();
+    if (!items.length) closeViewer(false); else show(Math.min(cur, items.length - 1));
+  }
+
+  function startShow(){ timer = setInterval(next, 3000); $('play').setAttribute('aria-pressed','true'); viewer.classList.add('hide-ui'); }
+  function stopShow(){ if (timer){clearInterval(timer); timer = null;} $('play').setAttribute('aria-pressed','false'); }
+
+  /* ---- Compartilhar ---- */
+  async function shareCur(){
+    var it = items[cur]; if (!it) return;
+    if (!P.Share || it.key.indexOf('file://') !== 0) { toast('Compartilhar funciona no app instalado, com arquivos do aparelho'); return; }
+    try { await P.Share.share({files: [it.key], dialogTitle: 'Compartilhar'}); }
+    catch (e) { var m = msgOf(e); if (!/cancel/i.test(m)) toast('Não foi possível compartilhar: ' + m); }
+  }
+
+  /* ---- Excluir de verdade (confirmação do próprio Android) ---- */
+  async function permanentDelete(list, fromViewer){
+    var real = list.filter(function(it){ return it.key.indexOf('file://') === 0; });
+    if (real.length) {
+      try {
+        if (!P.MediaDelete) throw new Error('recurso de exclusão não instalado neste APK');
+        var paths = real.map(function(it){ return decodeURI(it.key.replace('file://', '')); });
+        for (var i = 0; i < paths.length; i += 200) await P.MediaDelete.deleteFiles({paths: paths.slice(i, i + 200)});
+      } catch (e) {
+        var m = msgOf(e);
+        toast(/cancel/i.test(m) ? 'Exclusão cancelada' : 'Não foi possível excluir: ' + m);
+        return false;
+      }
+    }
+    list.forEach(function(it){
+      var i = all.indexOf(it); if (i >= 0) all.splice(i, 1);
+      delete trash[it.key]; delete favs[it.key]; delete locked[it.key];
+      if (it.url.indexOf('blob:') === 0) URL.revokeObjectURL(it.url);
+    });
+    save('meddia_trash_v1', trash); save('galeria_fav_v1', favs); save('meddia_locked_v1', locked); saveCache();
+    toast(list.length === 1 ? 'Excluída' : list.length + ' itens excluídos');
+    if (fromViewer) dropCurrent(); else applyFilter();
+    return true;
+  }
+  async function deleteCur(){
+    var it = items[cur]; if (!it) return;
+    stopShow();
+    if (mode === 'vault') {
+      var okc = await dialog({title: 'Excluir definitivamente?', msg: 'O arquivo será apagado. Não dá para desfazer.', ok: 'Excluir', danger: 1});
+      if (okc && (await vaultRemove([it]))) dropCurrent();
+      return;
+    }
+    if (mode === 'trash') {
+      var ok = await dialog({title: 'Excluir definitivamente?', msg: 'O arquivo será apagado do aparelho. Não dá para desfazer.', ok: 'Excluir', danger: 1});
+      if (ok) await permanentDelete([it], true);
+    } else if (settings.trash) {
+      trash[it.key] = Date.now(); save('meddia_trash_v1', trash);
+      dropCurrent();
+      toast('Movida para a lixeira', 'Desfazer', function(){
+        delete trash[it.key]; save('meddia_trash_v1', trash);
+        if (viewer.classList.contains('open')) closeViewer(false);
+        applyFilter();
+      });
+    } else {
+      var ok2 = await dialog({title: 'Excluir definitivamente?', msg: 'O arquivo será apagado do aparelho. Não dá para desfazer.', ok: 'Excluir', danger: 1});
+      if (ok2) await permanentDelete([it], true);
+    }
+  }
+  async function emptyTrash(){
+    var list = all.filter(function(it){ return trash[it.key]; });
+    if (!list.length) { toast('A lixeira já está vazia'); return; }
+    var ok = await dialog({title: 'Esvaziar a lixeira?', msg: list.length + (list.length === 1 ? ' item será apagado' : ' itens serão apagados') + ' do aparelho. Não dá para desfazer.', ok: 'Esvaziar', danger: 1});
+    if (ok) await permanentDelete(list, false);
+  }
+
+  $('close').onclick = function(){ closeViewer(false); };
+  $('next').onclick = next; $('prev').onclick = prev;
+  $('fav').onclick = toggleFav;
+  $('share').onclick = shareCur;
+  $('remove').onclick = deleteCur;
+  $('restore').onclick = function(){
+    var it = items[cur]; if (!it) return;
+    delete trash[it.key]; save('meddia_trash_v1', trash);
+    toast('Restaurada'); dropCurrent();
+  };
+  $('lock').onclick = async function(){
+    var it = items[cur]; if (!it) return;
+    if (it._vault) { if (await vaultRestore([it])) dropCurrent(); return; }
+    if (mode === 'vault') {
+      if (it.album && lockedAlbums[it.album]) { toast('Este item está em um álbum bloqueado. Desbloqueie o álbum nas configurações.'); return; }
+      delete locked[it.key]; save('meddia_locked_v1', locked);
+      toast('Tirada da pasta bloqueada'); dropCurrent(); return;
+    }
+    if (!(await ensurePassword())) return;
+    if (native && P.Vault) { if (await vaultAdd([it])) dropCurrent(); return; }
+    locked[it.key] = 1; save('meddia_locked_v1', locked);
+    toast('Movida para a pasta bloqueada'); dropCurrent();
+  };
+  $('zin').onclick = function(){ zoom(1.5); }; $('zout').onclick = function(){ zoom(1/1.5); };
+  $('rotl').onclick = function(){ rot -= 90; apply(); };
+  $('rotr').onclick = function(){ rot += 90; apply(); };
+  $('reset').onclick = resetView;
+  $('play').onclick = function(){ timer ? (stopShow(), viewer.classList.remove('hide-ui')) : startShow(); };
+
+  /* ---- Configurações ---- */
+  function renderSettings(){
+    $('optTrash').checked = !!settings.trash;
+    $('trashN').textContent = all.filter(function(it){ return trash[it.key]; }).length;
+    $('vaultN').textContent = all.filter(function(it){ return !trash[it.key] && isLocked(it); }).length;
+    $('pwLabel').textContent = pwHash ? 'Alterar senha' : 'Criar senha';
+    var cnt = {}, names = [];
+    all.forEach(function(it){ var a = it.album; if (!a || trash[it.key]) return; if (!cnt[a]) { cnt[a] = 0; names.push(a); } cnt[a]++; });
+    names.sort(function(a, b){ return cnt[b] - cnt[a]; });
+    var box = $('albList'); box.innerHTML = '';
+    names.forEach(function(n){
+      var lab = document.createElement('label'); lab.className = 'row';
+      var sp = document.createElement('span'); sp.textContent = n + ' (' + cnt[n] + ')';
+      var sw = document.createElement('input'); sw.type = 'checkbox'; sw.className = 'sw'; sw.checked = !!lockedAlbums[n];
+      sw.onchange = async function(){
+        if (sw.checked) {
+          if (!(await ensurePassword())) { sw.checked = false; return; }
+          lockedAlbums[n] = 1;
+        } else {
+          if (!(await unlock('Desbloquear álbum'))) { sw.checked = true; return; }
+          delete lockedAlbums[n];
+        }
+        save('meddia_lockalb_v1', lockedAlbums); applyFilter(); renderSettings();
+      };
+      lab.appendChild(sp); lab.appendChild(sw); box.appendChild(lab);
+    });
+    if (!names.length) { var p = document.createElement('p'); p.className = 'note'; p.textContent = 'Nenhum álbum encontrado ainda.'; box.appendChild(p); }
+  }
+  function openSettings(){ renderSettings(); $('settings').hidden = false; }
+  function closeSettings(){ $('settings').hidden = true; }
+  $('gear').onclick = openSettings;
+  $('sback').onclick = closeSettings;
+  $('optTrash').onchange = function(){ settings.trash = $('optTrash').checked; save('meddia_settings_v1', settings); };
+  $('openTrash').onclick = function(){ closeSettings(); setMode('trash'); };
+  $('emptyTrash').onclick = emptyTrash;
+  $('pwBtn').onclick = async function(){
+    if (!pwHash) { if (await newPassword('Criar senha')) { toast('Senha criada'); renderSettings(); } return; }
+    if (!(await askPassword('Senha atual'))) return;
+    if (await newPassword('Nova senha')) toast('Senha alterada');
+  };
+  $('openVault').onclick = async function(){
+    if (!pwHash && !(await newPassword('Criar senha'))) return;
+    if (!(await unlock('Pasta bloqueada'))) return;
+    await loadVault(); closeSettings(); setMode('vault');
+    var leg = all.filter(function(it){ return !trash[it.key] && isLocked(it) && it.key.indexOf('file://') === 0; });
+    if (leg.length && native && P.Vault) {
+      var okm = await dialog({title: 'Proteger de verdade?', msg: leg.length + (leg.length === 1 ? ' item está' : ' itens estão') + ' apenas escondido no MeDDia. Mover para o armazenamento privado do app? Eles deixam de aparecer em outras galerias.', ok: 'Mover'});
+      if (okm) await vaultAdd(leg);
+    }
+  };
+  $('bback').onclick = function(){ setMode('gallery'); };
+  $('bact').onclick = emptyTrash;
+
+  // tranca a pasta bloqueada se o app ficar um tempo em segundo plano
+  var hiddenAt = 0;
+  document.addEventListener('visibilitychange', function(){
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    if (mode === 'vault' && hiddenAt && Date.now() - hiddenAt > 20000) {
+      if (viewer.classList.contains('open')) closeViewer(false);
+      setMode('gallery');
+    }
+  });
+
+  /* Gestos: arrastar, pinça, toque duplo, deslizar para trocar (só em fotos) */
+  var ptrs = {}, startDist = 0, startScale = 1, lastTap = 0, sx = 0, sy = 0, moved = false, lx = 0, ly = 0;
+  function count(){ return Object.keys(ptrs).length; }
+  function dist(){ var k = Object.keys(ptrs), a = ptrs[k[0]], b = ptrs[k[1]]; return Math.hypot(a.x - b.x, a.y - b.y); }
+
+  stage.addEventListener('pointerdown', function(e){
+    if (items[cur] && items[cur].video) return;
+    stage.setPointerCapture(e.pointerId);
+    ptrs[e.pointerId] = {x: e.clientX, y: e.clientY};
+    if (count() === 1){ sx = lx = e.clientX; sy = ly = e.clientY; moved = false; }
+    if (count() === 2){ startDist = dist(); startScale = scale; }
+  });
+  stage.addEventListener('pointermove', function(e){
+    if (!ptrs[e.pointerId]) return;
+    ptrs[e.pointerId] = {x: e.clientX, y: e.clientY};
+    if (count() === 2){
+      scale = Math.min(8, Math.max(1, startScale * dist() / startDist)); moved = true; apply();
+    } else if (count() === 1){
+      if (Math.hypot(e.clientX - sx, e.clientY - sy) > 8) moved = true;
+      if (scale > 1){ tx += e.clientX - lx; ty += e.clientY - ly; apply(); }
+      lx = e.clientX; ly = e.clientY;
+    }
+  });
+  function end(e){
+    if (!ptrs[e.pointerId]) return;
+    var was = count();
+    delete ptrs[e.pointerId];
+    if (was !== 1) return;
+    var dx = e.clientX - sx, dy = e.clientY - sy;
+    if (scale === 1 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      stopShow(); dx < 0 ? next() : prev(); return;
+    }
+    if (!moved){
+      var now = Date.now();
+      if (now - lastTap < 300){ scale > 1 ? (scale = 1, tx = 0, ty = 0) : (scale = 2.5); apply(); lastTap = 0; }
+      else { lastTap = now; setTimeout(function(){ if (lastTap && Date.now() - lastTap >= 290){ viewer.classList.toggle('hide-ui'); lastTap = 0; } }, 300); }
+    }
+  }
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
+  stage.addEventListener('wheel', function(e){ e.preventDefault(); zoom(e.deltaY < 0 ? 1.15 : 1/1.15); }, {passive:false});
+
+  document.addEventListener('keydown', function(e){
+    if (selMode && !dlgResolve && e.key === 'Escape') { exitSel(); return; }
+    if (!viewer.classList.contains('open') || dlgResolve) return;
+    var k = e.key;
+    if (k === 'Escape') closeViewer(false);
+    else if (k === 'ArrowRight') next();
+    else if (k === 'ArrowLeft') prev();
+    else if (k === '+' || k === '=') zoom(1.25);
+    else if (k === '-') zoom(1/1.25);
+    else if (k === 'r' || k === 'R') { rot += 90; apply(); }
+    else if (k === ' ' && !(items[cur] && items[cur].video)) { e.preventDefault(); timer ? stopShow() : startShow(); }
+  });
+  window.addEventListener('resize', apply);
+  window.addEventListener('popstate', function(){ if (viewer.classList.contains('open')) closeViewer(true); });
+
+  // botão voltar do Android: fecha o que estiver aberto, passo a passo; por fim sai
+  function handleBack(){
+    if (dlgResolve) { dlgResolve(null); return true; }
+    if (selMode) { exitSel(); return true; }
+    if (viewer.classList.contains('open')) { closeViewer(false); return true; }
+    if (!$('settings').hidden) { closeSettings(); return true; }
+    if (mode !== 'gallery') { setMode('gallery'); return true; }
+    if (fType !== 'all' || fAlbum) { fType = 'all'; fAlbum = null; applyFilter(); window.scrollTo(0, 0); return true; }
+    return false;
+  }
+
+  syncBtns();
+
+  /* ---- Galeria automática (Android) ---- */
+  if (native) {
+    if (P.App && P.App.addListener) {
+      P.App.addListener('backButton', function(){ if (!handleBack()) P.App.exitApp(); });
+    }
+    var IMG = /\.(jpe?g|png|gif|webp|bmp|heic|heif|avif)$/i;
+    var VID = /\.(mp4|m4v|3gp|3gpp|webm|mov|mkv)$/i;
+
+    var sig = function(a){
+      var v = a.filter(function(i){ return i.video; }).length;
+      return a.length + '|' + v + '|' + (a[0] ? a[0].url : '') + '|' + (a.length ? a[a.length - 1].url : '');
+    };
+
+    // 1) mostra na hora o que foi encontrado da última vez
+    var cached = false;
+    try {
+      var c = load(KEY, []);
+      if (c.length) {
+        all = c.map(function(x){
+          return {url: cap.convertFileSrc(x.u), name: x.n, video: !!x.v, t: x.t, key: x.u, album: x.a};
+        });
+        applyFilter(); cached = true;
+      }
+    } catch (e) {}
+    if (!cached) $('count').textContent = 'Carregando galeria…';
+
+    // 2) atualiza a lista em segundo plano
+    var scan = async function(){
+      try {
+        try { await P.Media.requestPermissions(); } catch (e) {}
+        var res = await P.Media.getAlbums();
+        var lists = await Promise.all(res.albums.map(function(a){
+          return P.Filesystem.readdir({ path: a.identifier })
+            .then(function(r){ return {name: a.name, files: r.files}; })
+            .catch(function(){ return {name: a.name, files: []}; });
+        }));
+        var seen = {}, found = [];
+        lists.forEach(function(L){
+          L.files.forEach(function(f){
+            if (f.type !== 'file' || seen[f.uri]) return;
+            var isV = VID.test(f.name);
+            if (!isV && !IMG.test(f.name)) return;
+            seen[f.uri] = 1;
+            var t = f.mtime || 0; if (t && t < 1e12) t *= 1000;
+            found.push({url: cap.convertFileSrc(f.uri), name: f.name, video: isV, t: t, key: f.uri, album: L.name});
+          });
+        });
+        found.sort(function(a, b){ return b.t - a.t; });
+        var changed = sig(found) !== sig(all);
+        if (changed && !viewer.classList.contains('open')) { all = found; applyFilter(); }
+        saveCache(found);
+        if (!all.length) $('count').textContent = 'Nenhuma foto encontrada';
+      } catch (e) {
+        if (!all.length) $('count').textContent = 'Erro: ' + msgOf(e);
+      }
+    };
+    window.__scan = scan; scan();
+  }
+})();
+</script>
+</body>
+</html>
