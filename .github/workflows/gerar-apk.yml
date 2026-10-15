@@ -32,7 +32,7 @@ jobs:
           sed -i 's#<string name="app_name">[^<]*</string>#<string name="app_name">MeDDia</string>#; s#<string name="title_activity_main">[^<]*</string>#<string name="title_activity_main">MeDDia</string>#' android/app/src/main/res/values/strings.xml
       - name: Permissoes de galeria
         run: |
-          sed -i 's#<application#<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /><uses-permission android:name="android.permission.READ_MEDIA_VIDEO" /><uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /><uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /><application#' android/app/src/main/AndroidManifest.xml
+          sed -i 's#<application#<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /><uses-permission android:name="android.permission.READ_MEDIA_VIDEO" /><uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /><uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /><uses-permission android:name="android.permission.USE_BIOMETRIC" /><application#' android/app/src/main/AndroidManifest.xml
       - name: Exclusao nativa
         run: |
           APPID=$(node -p "require('./capacitor.config.json').appId")
@@ -152,6 +152,256 @@ jobs:
               }
           }
           JAVA
+          cat > "$DIR/VaultPlugin.java" <<'JAVA'
+          package __PKG__;
+
+          import android.content.ContentResolver;
+          import android.content.ContentValues;
+          import android.media.MediaScannerConnection;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Environment;
+          import android.provider.MediaStore;
+          import android.webkit.MimeTypeMap;
+
+          import androidx.biometric.BiometricManager;
+          import androidx.biometric.BiometricPrompt;
+          import androidx.core.content.ContextCompat;
+
+          import com.getcapacitor.JSArray;
+          import com.getcapacitor.JSObject;
+          import com.getcapacitor.Plugin;
+          import com.getcapacitor.PluginCall;
+          import com.getcapacitor.PluginMethod;
+          import com.getcapacitor.annotation.CapacitorPlugin;
+
+          import org.json.JSONArray;
+          import org.json.JSONObject;
+
+          import java.io.ByteArrayOutputStream;
+          import java.io.File;
+          import java.io.FileInputStream;
+          import java.io.FileOutputStream;
+          import java.io.InputStream;
+          import java.io.OutputStream;
+          import java.util.UUID;
+
+          @CapacitorPlugin(name = "Vault")
+          public class VaultPlugin extends Plugin {
+              private static final int AUTH = BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.BIOMETRIC_WEAK;
+
+              private File dir() {
+                  File d = new File(getContext().getFilesDir(), "vault");
+                  if (!d.exists()) d.mkdirs();
+                  return d;
+              }
+
+              private synchronized JSONArray readIdx() {
+                  try {
+                      File f = new File(dir(), "index.json");
+                      if (!f.exists()) return new JSONArray();
+                      InputStream in = new FileInputStream(f);
+                      ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                      byte[] b = new byte[8192];
+                      int n;
+                      while ((n = in.read(b)) > 0) bo.write(b, 0, n);
+                      in.close();
+                      return new JSONArray(bo.toString("UTF-8"));
+                  } catch (Exception e) {
+                      return new JSONArray();
+                  }
+              }
+
+              private synchronized void writeIdx(JSONArray a) throws Exception {
+                  File tmp = new File(dir(), "index.tmp");
+                  OutputStream o = new FileOutputStream(tmp);
+                  o.write(a.toString().getBytes("UTF-8"));
+                  o.close();
+                  tmp.renameTo(new File(dir(), "index.json"));
+              }
+
+              private void copy(InputStream in, OutputStream out) throws Exception {
+                  byte[] b = new byte[65536];
+                  int n;
+                  while ((n = in.read(b)) > 0) out.write(b, 0, n);
+                  in.close();
+                  out.close();
+              }
+
+              private String ext(String name) {
+                  int i = name.lastIndexOf('.');
+                  return i >= 0 ? name.substring(i) : "";
+              }
+
+              private boolean ids(JSONArray idx, JSArray ids, boolean wipe) throws Exception {
+                  JSONArray keep = new JSONArray();
+                  for (int i = 0; i < idx.length(); i++) {
+                      JSONObject o = idx.getJSONObject(i);
+                      boolean hit = false;
+                      for (int j = 0; j < ids.length(); j++) if (o.getString("id").equals(ids.getString(j))) hit = true;
+                      if (hit) { if (wipe) new File(dir(), o.getString("file")).delete(); }
+                      else keep.put(o);
+                  }
+                  writeIdx(keep);
+                  return true;
+              }
+
+              @PluginMethod
+              public void available(PluginCall call) {
+                  JSObject r = new JSObject();
+                  r.put("ok", BiometricManager.from(getContext()).canAuthenticate(AUTH) == BiometricManager.BIOMETRIC_SUCCESS);
+                  call.resolve(r);
+              }
+
+              @PluginMethod
+              public void authenticate(final PluginCall call) {
+                  final String title = call.getString("title", "Pasta bloqueada");
+                  getActivity().runOnUiThread(new Runnable() {
+                      public void run() {
+                          try {
+                              BiometricPrompt.PromptInfo info = new BiometricPrompt.PromptInfo.Builder()
+                                  .setTitle(title).setSubtitle("Use sua digital")
+                                  .setNegativeButtonText("Usar senha").setAllowedAuthenticators(AUTH).build();
+                              BiometricPrompt bp = new BiometricPrompt(getActivity(), ContextCompat.getMainExecutor(getContext()),
+                                  new BiometricPrompt.AuthenticationCallback() {
+                                      @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) { call.resolve(); }
+                                      @Override public void onAuthenticationError(int code, CharSequence msg) {
+                                          if (code == BiometricPrompt.ERROR_USER_CANCELED || code == BiometricPrompt.ERROR_CANCELED) call.reject("cancelado");
+                                          else call.reject("senha");
+                                      }
+                                  });
+                              bp.authenticate(info);
+                          } catch (Exception e) {
+                              call.reject("senha");
+                          }
+                      }
+                  });
+              }
+
+              @PluginMethod
+              public void moveIn(final PluginCall call) {
+                  final JSArray items = call.getArray("items");
+                  if (items == null) { call.reject("sem itens"); return; }
+                  new Thread(new Runnable() {
+                      public void run() {
+                          try {
+                              JSONArray idx = readIdx();
+                              JSArray done = new JSArray();
+                              for (int i = 0; i < items.length(); i++) {
+                                  try {
+                                      JSONObject o = items.getJSONObject(i);
+                                      File src = new File(o.getString("path"));
+                                      String id = UUID.randomUUID().toString();
+                                      String name = o.optString("name", src.getName());
+                                      String fn = id + ext(name);
+                                      File dst = new File(dir(), fn);
+                                      copy(new FileInputStream(src), new FileOutputStream(dst));
+                                      if (dst.length() != src.length()) { dst.delete(); continue; }
+                                      JSONObject e = new JSONObject();
+                                      e.put("id", id); e.put("file", fn); e.put("name", name);
+                                      e.put("t", o.optLong("t", 0)); e.put("album", o.optString("album", ""));
+                                      e.put("video", o.optInt("video", 0));
+                                      idx.put(e); done.put(id);
+                                  } catch (Exception ex) { /* pula este item */ }
+                              }
+                              if (done.length() == 0) { call.reject("nenhum arquivo copiado"); return; }
+                              writeIdx(idx);
+                              JSObject r = new JSObject();
+                              r.put("ids", done);
+                              call.resolve(r);
+                          } catch (Exception e) {
+                              call.reject("erro: " + e.getMessage());
+                          }
+                      }
+                  }).start();
+              }
+
+              @PluginMethod
+              public void list(PluginCall call) {
+                  try {
+                      JSONArray idx = readIdx();
+                      JSArray out = new JSArray();
+                      for (int i = 0; i < idx.length(); i++) {
+                          JSONObject o = idx.getJSONObject(i);
+                          File f = new File(dir(), o.getString("file"));
+                          if (!f.exists()) continue;
+                          JSObject x = new JSObject();
+                          x.put("id", o.getString("id")); x.put("path", f.getAbsolutePath());
+                          x.put("name", o.getString("name")); x.put("t", o.optLong("t", 0));
+                          x.put("album", o.optString("album", "")); x.put("video", o.optInt("video", 0));
+                          out.put(x);
+                      }
+                      JSObject r = new JSObject();
+                      r.put("items", out);
+                      call.resolve(r);
+                  } catch (Exception e) {
+                      call.reject("erro: " + e.getMessage());
+                  }
+              }
+
+              @PluginMethod
+              public void discard(PluginCall call) {
+                  try { ids(readIdx(), call.getArray("ids"), true); call.resolve(); }
+                  catch (Exception e) { call.reject("erro: " + e.getMessage()); }
+              }
+
+              @PluginMethod
+              public void remove(PluginCall call) { discard(call); }
+
+              @PluginMethod
+              public void moveOut(final PluginCall call) {
+                  final JSArray want = call.getArray("ids");
+                  if (want == null) { call.reject("sem itens"); return; }
+                  new Thread(new Runnable() {
+                      public void run() {
+                          try {
+                              JSONArray idx = readIdx();
+                              JSArray ok = new JSArray();
+                              for (int i = 0; i < idx.length(); i++) {
+                                  JSONObject o = idx.getJSONObject(i);
+                                  boolean hit = false;
+                                  for (int j = 0; j < want.length(); j++) if (o.getString("id").equals(want.getString(j))) hit = true;
+                                  if (!hit) continue;
+                                  try {
+                                      File f = new File(dir(), o.getString("file"));
+                                      String name = o.getString("name");
+                                      boolean vid = o.optInt("video", 0) == 1;
+                                      String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext(name).replace(".", "").toLowerCase());
+                                      if (mime == null) mime = vid ? "video/mp4" : "image/jpeg";
+                                      String base = vid ? Environment.DIRECTORY_MOVIES : Environment.DIRECTORY_PICTURES;
+                                      if (Build.VERSION.SDK_INT >= 29) {
+                                          ContentResolver cr = getContext().getContentResolver();
+                                          ContentValues v = new ContentValues();
+                                          v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+                                          v.put(MediaStore.MediaColumns.MIME_TYPE, mime);
+                                          v.put(MediaStore.MediaColumns.RELATIVE_PATH, base + "/MeDDia");
+                                          long t = o.optLong("t", 0);
+                                          if (t > 0) v.put(MediaStore.MediaColumns.DATE_TAKEN, t);
+                                          Uri col = vid ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI : MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+                                          Uri u = cr.insert(col, v);
+                                          if (u == null) continue;
+                                          copy(new FileInputStream(f), cr.openOutputStream(u));
+                                      } else {
+                                          File d = new File(Environment.getExternalStoragePublicDirectory(base), "MeDDia");
+                                          d.mkdirs();
+                                          File dst = new File(d, name);
+                                          copy(new FileInputStream(f), new FileOutputStream(dst));
+                                          MediaScannerConnection.scanFile(getContext(), new String[]{dst.getAbsolutePath()}, null, null);
+                                      }
+                                      ok.put(o.getString("id"));
+                                  } catch (Exception ex) { /* mantém no cofre */ }
+                              }
+                              if (ok.length() == 0) { call.reject("nenhum arquivo restaurado"); return; }
+                              ids(readIdx(), ok, true);
+                              call.resolve();
+                          } catch (Exception e) {
+                              call.reject("erro: " + e.getMessage());
+                          }
+                      }
+                  }).start();
+              }
+          }
+          JAVA
           cat > "$DIR/MainActivity.java" <<'JAVA'
           package __PKG__;
 
@@ -162,11 +412,14 @@ jobs:
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   registerPlugin(MediaDeletePlugin.class);
+                  registerPlugin(VaultPlugin.class);
                   super.onCreate(savedInstanceState);
               }
           }
           JAVA
-          sed -i "s/__PKG__/$APPID/" "$DIR/MediaDeletePlugin.java" "$DIR/MainActivity.java"
+          sed -i "s/__PKG__/$APPID/" "$DIR/MediaDeletePlugin.java" "$DIR/VaultPlugin.java" "$DIR/MainActivity.java"
+      - name: Dependencia de biometria
+        run: sed -i '/^dependencies {/a\    implementation "androidx.biometric:biometric:1.1.0"' android/app/build.gradle
       - name: Sincronizar
         run: npx cap sync android
       - name: Assinatura fixa
